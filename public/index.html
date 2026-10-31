@@ -51,6 +51,16 @@
       </aside>
       <div class="sidebar-shade" id="sidebar-shade" hidden></div>
       <main class="main">
+        <div class="atmosphere" aria-hidden="true">
+          <span class="aurora aurora-one"></span
+          ><span class="aurora aurora-two"></span
+          ><span class="ambient-star star-one"></span
+          ><span class="ambient-star star-two"></span
+          ><span class="ambient-star star-three"></span
+          ><span class="ambient-star star-four"></span
+          ><span class="ambient-star star-five"></span
+          ><span class="ambient-star star-six"></span>
+        </div>
         <header class="topbar">
           <div class="topbar-left">
             <button
@@ -90,6 +100,9 @@
           <section class="orb-stage" aria-label="Assistentens aktivitet">
             <div class="voice-orb" id="voice-orb" aria-hidden="true">
               <div class="orb-halo"></div>
+              <div class="orb-aura"></div>
+              <div class="orb-ripple ripple-one"></div>
+              <div class="orb-ripple ripple-two"></div>
               <svg class="orb-rings" viewBox="0 0 260 260" fill="none">
                 <circle class="orbit-fine" cx="130" cy="130" r="118" />
                 <circle class="orbit-ticks" cx="130" cy="130" r="110" />
@@ -110,6 +123,11 @@
                     stroke-dasharray="210 50 80 181"
                   />
                   <circle cx="130" cy="130" r="76" stroke-dasharray="2 10" />
+                </g>
+                <g class="orbit-satellites">
+                  <circle cx="130" cy="12" r="2.4" />
+                  <circle cx="232" cy="189" r="1.6" />
+                  <circle cx="28" cy="189" r="1.6" />
                 </g>
                 <circle class="orbit-core-ring" cx="130" cy="130" r="64" />
               </svg>

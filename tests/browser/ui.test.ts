@@ -113,6 +113,12 @@ test("desktop chat, live deltas, speech playback, speech-only replay, history an
       await f.page.locator("h1").innerText(),
       "Plads til dine tanker.",
     );
+    assert.ok(
+      (await f.page
+        .locator("#voice-orb")
+        .evaluate((el) => el.getBoundingClientRect().width)) >= 300,
+    );
+    await f.page.waitForFunction(() => Number(getComputedStyle(document.querySelector('#voice-orb')!).opacity) >= .99);
     mkdirSync("artifacts", { recursive: true });
     await f.page.screenshot({
       path: "artifacts/chat-desktop.png",
@@ -203,6 +209,23 @@ test("desktop chat, live deltas, speech playback, speech-only replay, history an
       path: "artifacts/chat-mobile.png",
       fullPage: true,
     });
+    assert.ok(
+      (await f.page
+        .locator("#voice-orb")
+        .evaluate((el) => el.getBoundingClientRect().width)) >= 160,
+    );
+    await f.page.emulateMedia({ reducedMotion: "reduce" });
+    await f.page.waitForFunction(
+      () =>
+        document.querySelector("#voice-orb")!.getAnimations({ subtree: true })
+          .length === 0,
+    );
+    assert.equal(
+      await f.page
+        .locator(".atmosphere")
+        .evaluate((el) => el.getAnimations({ subtree: true }).length),
+      0,
+    );
   } finally {
     await f.close();
   }

@@ -15,3 +15,5 @@ Du skal ikke køre Installer.command igen. Erstat ikke hele den eksisterende pro
 Interfacet er mørkt med cyan lys, en central animeret cirkel og den eksisterende chat. Ingen instrumentpaneler eller falsk mikrofonstatus. Cirklen viser, når assistenten arbejder, og analyserer den faktiske lyd fra afspilleren med browserens Web Audio API, når talen afspilles. Den bruger ikke mikrofonen. Stop stopper både lyd og bevægelse. Animation dæmpes, når macOS/browseren har reduceret bevægelse aktiveret; lydafspilning bevares.
 
 Hvis Safari blokerer automatisk afspilning, tryk på afspilningsknappen i chatten. Hvis lydanalyse ikke understøttes eller tillades af browseren, bevares almindelig afspilning. Browserens lokale lydadgang og visuelle reaktion er testet i Chromium; Safari-kontrollen på din Mac udestår.
+
+Den seneste udgave har en større lyscirkel, langsomt bevægeligt baggrundslys, kredsende lyspunkter og separate bølgebånd, der følger frekvenserne i den afspillede lyd. Stop nulstiller effekten med det samme. Bevægelse sættes på pause i skjulte faner, og reduceret bevægelse dæmper alle nye animationer.

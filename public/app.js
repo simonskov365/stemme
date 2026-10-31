@@ -227,6 +227,7 @@ function cleanAudio(a) {
   player.pause();
   player.removeAttribute("src");
   player.load();
+  resetVoice();
   if (a.currentUrl) URL.revokeObjectURL(a.currentUrl);
   a.currentUrl = null;
   for (const url of a.queue.values()) URL.revokeObjectURL(url);
@@ -833,7 +834,9 @@ async function initialize() {
 void initialize();
 
 // Analyse only the assistant's playback. No microphone access is requested.
-let voiceContext, voiceAnalyser, voiceSamples, voiceFrame;
+let voiceContext, voiceAnalyser, voiceSamples, voiceFrequencies, voiceFrame;
+const voiceBars = [...document.querySelectorAll(".orb-wave i")];
+let voiceEnvelope = 0;
 const reducedMotion = matchMedia("(prefers-reduced-motion: reduce)");
 async function animateVoice() {
   controls();
@@ -857,6 +860,7 @@ async function animateVoice() {
       voiceContext = context;
       voiceAnalyser = analyser;
       voiceSamples = new Uint8Array(analyser.frequencyBinCount);
+      voiceFrequencies = new Uint8Array(analyser.frequencyBinCount);
     } else if (voiceContext.state === "suspended") await voiceContext.resume();
     cancelAnimationFrame(voiceFrame);
     const draw = () => {
@@ -874,10 +878,17 @@ async function animateVoice() {
         voiceSamples.reduce((sum, n) => sum + ((n - 128) / 128) ** 2, 0) /
           voiceSamples.length,
       );
-      $("voice-orb").style.setProperty(
-        "--voice-level",
-        String(Math.min(1, energy * 5)),
-      );
+      voiceEnvelope = voiceEnvelope * 0.65 + Math.min(1, energy * 6) * 0.35;
+      $("voice-orb").style.setProperty("--voice-level", String(voiceEnvelope));
+      document
+        .querySelector(".main")
+        .style.setProperty("--ambient-level", String(voiceEnvelope));
+      voiceAnalyser.getByteFrequencyData(voiceFrequencies);
+      voiceBars.forEach((bar, index) => {
+        const bin = 1 + Math.abs(index - 4) * 4;
+        const level = (voiceFrequencies[bin] + voiceFrequencies[bin + 1]) / 510;
+        bar.style.setProperty("--band-level", String(level));
+      });
       voiceFrame = requestAnimationFrame(draw);
     };
     draw();
@@ -887,7 +898,10 @@ async function animateVoice() {
 }
 function resetVoice() {
   cancelAnimationFrame(voiceFrame);
+  voiceEnvelope = 0;
   $("voice-orb").style.setProperty("--voice-level", "0");
+  document.querySelector(".main").style.setProperty("--ambient-level", "0");
+  voiceBars.forEach((bar) => bar.style.setProperty("--band-level", "0"));
   controls();
 }
 player.addEventListener("play", () => {
@@ -900,6 +914,9 @@ reducedMotion.addEventListener("change", () => {
   else if (!player.paused) void animateVoice();
 });
 document.addEventListener("visibilitychange", () => {
+  document
+    .querySelector(".main")
+    .classList.toggle("motion-paused", document.hidden);
   if (document.hidden) resetVoice();
   else if (!player.paused) void animateVoice();
 });
