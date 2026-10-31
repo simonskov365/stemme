@@ -12,7 +12,7 @@ const speechBytes = execFileSync("ffmpeg", [
   "-f",
   "lavfi",
   "-i",
-  "anullsrc=r=44100:cl=mono",
+  "sine=frequency=220:sample_rate=44100",
   "-t",
   "2",
   "-f",
@@ -130,6 +130,17 @@ test("desktop chat, live deltas, speech playback, speech-only replay, history an
     await f.page.waitForFunction(
       () => !document.querySelector("#audio-tray")?.hasAttribute("hidden"),
     );
+    await f.page.waitForFunction(
+      () => document.documentElement.dataset.assistantState === "speaking",
+    );
+    await f.page.waitForFunction(
+      () =>
+        Number(
+          document
+            .querySelector<HTMLElement>("#voice-orb")!
+            .style.getPropertyValue("--voice-level"),
+        ) > 0,
+    );
     assert.equal(f.store.all("SELECT * FROM conversations").length, 1);
     assert.equal(
       f.store.all("SELECT * FROM messages WHERE role='assistant'")[0].status,
@@ -137,6 +148,17 @@ test("desktop chat, live deltas, speech playback, speech-only replay, history an
     );
     await f.page.locator("#stop-audio").click();
     assert.equal(await f.page.locator("#audio-tray").isVisible(), false);
+    await f.page.waitForFunction(
+      () => document.documentElement.dataset.assistantState === "idle",
+    );
+    assert.equal(
+      await f.page
+        .locator("#voice-orb")
+        .evaluate((el) =>
+          (el as HTMLElement).style.getPropertyValue("--voice-level"),
+        ),
+      "0",
+    );
     // A second speech-only request must ignore the earlier batch's terminal/replay events.
     await f.page.locator(".message-action").click();
     await f.page.waitForFunction(
@@ -194,6 +216,12 @@ test("stop cancels generation; new conversation rejects late text and audio", as
       document
         .querySelector(".message.assistant .message-content")
         ?.textContent?.includes("Dette er starten"),
+    );
+    assert.equal(
+      await f.page.evaluate(
+        () => document.documentElement.dataset.assistantState,
+      ),
+      "thinking",
     );
     await f.page.locator("#stop-generation").click();
     await f.engine.idle();

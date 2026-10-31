@@ -1095,3 +1095,602 @@ dialog input:not([type="checkbox"]) {
   z-index: 1;
   cursor: pointer;
 }
+
+/* Quiet cinematic interface: a voice, an orbit, and the conversation. */
+:root {
+  color-scheme: dark;
+  --green: #69deef;
+  --muted: #7f9bab;
+  --border: #1c303e;
+  --paper: #0a121b;
+  color: #dcebf2;
+  background: #070d14;
+}
+body {
+  background: #070d14;
+}
+.app-shell {
+  background:
+    radial-gradient(ellipse at 64% 32%, #102a3a65, transparent 55%), #070d14;
+}
+.sidebar {
+  background: #0a111a;
+  border-color: #17232e;
+}
+.brand {
+  color: #e1eff5;
+  font-weight: 500;
+}
+.brand-mark i {
+  background: #73dbed;
+  box-shadow: 0 0 10px #66dded33;
+}
+.new-chat {
+  background: #0d1d28;
+  border-color: #233f50;
+  box-shadow: none;
+  color: #afdce8;
+}
+.new-chat:hover {
+  border-color: #538599;
+  background: #102632;
+}
+.shortcut,
+.sidebar-heading {
+  color: #688697;
+}
+.sidebar-empty {
+  color: #6a8392;
+}
+.conversation-item {
+  color: #92a9b7;
+}
+.conversation-item::before {
+  color: #4a768b;
+}
+.conversation-item:hover {
+  background: #102330;
+}
+.conversation-item.active {
+  background: #112b3b;
+  color: #b1ebf5;
+}
+.conversation-item.active::before {
+  color: #71d8ef;
+}
+.settings-button {
+  color: #7895a7;
+}
+.settings-button:hover {
+  color: #bcecf4;
+}
+.profile {
+  border-color: #1c2b37;
+  color: #afc5d2;
+}
+.profile small {
+  color: #5f7d90;
+}
+.avatar {
+  background: #142b3a;
+  color: #9bbccb;
+}
+.profile-dot {
+  background: #66d7e5;
+  box-shadow: 0 0 7px #56dcdf66;
+}
+.topbar {
+  height: 75px;
+  border-color: #162532;
+  padding: 0 30px;
+  background: #080f1770;
+}
+.room-name {
+  color: #9ab3c3;
+}
+.private-label {
+  border-color: #263b48;
+  color: #69899d;
+}
+.connection {
+  color: #85b6c6;
+}
+.connection i {
+  background: #77d8e6;
+  box-shadow: 0 0 7px #66ddef66;
+}
+.connection.error {
+  color: #e0b090;
+}
+.connection.error i {
+  background: #d39b76;
+}
+.icon-button {
+  color: #7799ac;
+}
+.icon-button:hover {
+  background: #142a38;
+  color: #bcebf5;
+}
+.workspace {
+  padding-top: 15px;
+  scrollbar-color: #29495d transparent;
+}
+.orb-stage {
+  display: flex;
+  align-items: center;
+  flex-direction: column;
+  justify-content: center;
+  padding: 16px 0 21px;
+  flex-shrink: 0;
+}
+.voice-orb {
+  --voice-level: 0;
+  position: relative;
+  width: 248px;
+  height: 248px;
+  isolation: isolate;
+  transition:
+    width 0.4s,
+    height 0.4s;
+}
+.orb-halo {
+  position: absolute;
+  inset: 12%;
+  border-radius: 50%;
+  background: radial-gradient(circle, #3ecdf824, transparent 70%);
+  filter: blur(12px);
+  transform: scale(calc(1 + var(--voice-level) * 0.7));
+  opacity: 0.65;
+}
+.orb-rings {
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+  position: relative;
+  filter: drop-shadow(0 0 4px #51cbe64d);
+}
+.orbit-fine {
+  stroke: #255268;
+  stroke-width: 0.5;
+}
+.orbit-ticks {
+  stroke: #39758c;
+  stroke-width: 3;
+  stroke-dasharray: 1 10;
+  opacity: 0.65;
+}
+.orbit-outer {
+  stroke: #5bcbe6;
+  stroke-width: 1.5;
+  transform-origin: 130px 130px;
+  animation: orbit-clockwise 60s linear infinite;
+}
+.orbit-inner {
+  stroke: #367a98;
+  stroke-width: 1;
+  transform-origin: 130px 130px;
+  animation: orbit-clockwise 42s linear infinite reverse;
+}
+.orbit-core-ring {
+  stroke: #71def280;
+  stroke-width: 0.7;
+}
+.orb-core {
+  position: absolute;
+  inset: 26%;
+  border: 1px solid #235873;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  background: radial-gradient(circle at 40% 35%, #19485a, #0b2233 65%, #0a1b28);
+  box-shadow:
+    inset 0 0 35px #52bede16,
+    0 0 28px #31a9d618;
+  transform: scale(calc(1 + var(--voice-level) * 0.12));
+}
+.orb-light {
+  position: absolute;
+  inset: 15%;
+  border-radius: 50%;
+  background: radial-gradient(circle, #6be4f21c, transparent 75%);
+}
+.orb-wave {
+  display: flex;
+  gap: 4px;
+  align-items: center;
+  height: 45%;
+  z-index: 1;
+}
+.orb-wave i {
+  height: 15%;
+  width: 2px;
+  border-radius: 3px;
+  background: #a1edfa;
+  box-shadow: 0 0 8px #52daee77;
+  transform: scaleY(calc(1 + var(--voice-level) * 4));
+}
+.orb-wave i:nth-child(2),
+.orb-wave i:nth-child(8) {
+  height: 27%;
+}
+.orb-wave i:nth-child(3),
+.orb-wave i:nth-child(7) {
+  height: 46%;
+}
+.orb-wave i:nth-child(4),
+.orb-wave i:nth-child(6) {
+  height: 67%;
+}
+.orb-wave i:nth-child(5) {
+  height: 85%;
+}
+.orb-status {
+  color: #6698ae;
+  text-transform: uppercase;
+  font-size: 8px;
+  letter-spacing: 3px;
+  margin-top: 15px;
+  min-height: 13px;
+}
+.welcome {
+  margin: 0 auto 25px;
+  max-width: 780px;
+}
+.eyebrow {
+  color: #4e859d;
+  font-size: 8px;
+  letter-spacing: 2.2px;
+}
+.eyebrow > span {
+  background: #55a3be;
+}
+h1 {
+  font-size: 38px;
+  letter-spacing: -1px;
+  margin-top: 16px;
+  color: #d1e9f4;
+  font-weight: 350;
+}
+h1 em {
+  font-family: inherit;
+  font-style: normal;
+  color: #71d4eb;
+}
+.welcome > p {
+  color: #6e93a7;
+  font-size: 12px;
+}
+.suggestions {
+  margin-top: 27px;
+  gap: 12px;
+}
+.suggestions button {
+  background: #0c1a25aa;
+  border-color: #1c3445;
+  border-radius: 9px;
+  min-height: 110px;
+  padding: 15px 17px;
+}
+.suggestions button:hover {
+  border-color: #36728d;
+  background: #102735;
+  box-shadow: 0 0 20px #43b8df09;
+}
+.suggestion-icon {
+  color: #67b8d1;
+  font-size: 19px;
+  margin-bottom: 11px;
+  filter: grayscale(1);
+}
+.suggestions strong {
+  color: #b4cedb;
+}
+.suggestions button > span:not(.suggestion-icon) {
+  color: #5f8aa1;
+}
+.suggestions b {
+  color: #548ca6;
+}
+.composer-area {
+  padding-top: 12px;
+  padding-bottom: 20px;
+}
+.composer {
+  background: #0b1822e8;
+  border-color: #224156;
+  box-shadow: 0 0 36px #28b5dc07;
+  border-radius: 13px;
+}
+.composer:focus-within {
+  border-color: #487e96;
+  box-shadow: 0 0 25px #3fb5d00c;
+}
+.composer textarea {
+  color: #d0e5ef;
+}
+.composer textarea::placeholder {
+  color: #567b90;
+}
+.speech-toggle {
+  color: #7ca7bb;
+}
+.toggle-track {
+  background: #243e50;
+}
+.speech-toggle input:checked + .toggle-track {
+  background: #408b9e;
+}
+.speech-toggle input:checked + .toggle-track::after {
+  background: #c5f4fa;
+}
+.input-hint {
+  color: #4e7387;
+}
+.send-button {
+  background: #2d768e;
+  color: #d3f5ff;
+  border: 1px solid #4b9db6;
+  box-shadow: 0 0 12px #52c7e915;
+}
+.send-button:not(:disabled):hover {
+  background: #368da7;
+}
+.stop-button {
+  background: #163343;
+  border-color: #325a6e;
+  color: #a8dae8;
+}
+.composer-note {
+  color: #426c82;
+}
+.composer-note > span:first-child {
+  color: #4a819c;
+}
+.message-role {
+  color: #79a3ba;
+}
+.message-role::before {
+  background: #102c3d;
+  color: #6fd5ed;
+  border: 1px solid #23526a;
+}
+.message.user .message-role::before {
+  background: #15232d;
+  color: #92acbd;
+}
+.message-content {
+  color: #bdd5e4;
+}
+.message.user .message-content {
+  color: #8eafc4;
+}
+.message-meta {
+  color: #638da4;
+}
+.message-action {
+  color: #6abbd3;
+}
+.message-content.pending:empty::after {
+  color: #6cdcf1;
+}
+.audio-tray {
+  background: #102a3b;
+  border: 1px solid #24526a;
+  color: #8bcfe2;
+}
+.audio-indicator {
+  color: #75e2f5;
+}
+.notice {
+  background: #2a251e;
+  border-color: #5c4930;
+  color: #d3b28b;
+}
+.notice-close {
+  color: #bf9a70;
+}
+dialog {
+  background: #0c1822;
+  border-color: #2d4c60;
+  color: #c0dce9;
+  box-shadow: 0 25px 100px #0009;
+}
+dialog::backdrop {
+  background: #02080dbb;
+}
+dialog p {
+  color: #7f9eb0;
+}
+.setting-row,
+.access-settings {
+  border-color: #263f50;
+}
+.setting-row small,
+.muted {
+  color: #7092a7;
+}
+.memory-heading > span {
+  color: #7094ab;
+}
+.memory-item {
+  background: #102838;
+  border-color: #294c62;
+}
+.memory-item p {
+  color: #a8c9da;
+}
+.memory-item button {
+  color: #79b6ce;
+}
+dialog textarea,
+dialog input:not([type="checkbox"]) {
+  background: #09151f;
+  border-color: #2c5066;
+  color: #c4e6f3;
+}
+.primary-button {
+  background: #286e87;
+  color: #e0f6ff;
+}
+.secondary-button {
+  background: #142d3f;
+  border-color: #2d5166;
+  color: #aacfe1;
+}
+.dialog-feedback {
+  color: #80cede;
+}
+.in-conversation .voice-orb {
+  width: 128px;
+  height: 128px;
+}
+.in-conversation .orb-stage {
+  padding: 0 0 8px;
+}
+.in-conversation .orb-status {
+  margin-top: 1px;
+  font-size: 7px;
+  letter-spacing: 2px;
+}
+.in-conversation .messages {
+  margin-top: 0;
+}
+.in-conversation .orb-wave {
+  gap: 2px;
+}
+.in-conversation .orb-wave i {
+  width: 1.5px;
+}
+[data-assistant-state="thinking"] .orbit-outer {
+  animation-duration: 10s;
+  stroke: #8ae0f1;
+}
+[data-assistant-state="thinking"] .orb-halo {
+  animation: orb-breathe 2.5s ease-in-out infinite;
+}
+[data-assistant-state="speaking"] .orbit-core-ring {
+  stroke: #a0efff;
+}
+[data-assistant-state="speaking"] .orb-status {
+  color: #9be1f2;
+}
+[data-assistant-state="offline"] .voice-orb {
+  opacity: 0.45;
+}
+@keyframes orbit-clockwise {
+  to {
+    transform: rotate(360deg);
+  }
+}
+@keyframes orb-breathe {
+  50% {
+    opacity: 1;
+    transform: scale(1.15);
+  }
+}
+@media (min-height: 900px) and (min-width: 701px) {
+  .orb-stage {
+    padding-top: 5vh;
+    padding-bottom: 28px;
+  }
+  .voice-orb {
+    width: 275px;
+    height: 275px;
+  }
+  .in-conversation .orb-stage {
+    padding-top: 5px;
+    padding-bottom: 8px;
+  }
+}
+@media (max-width: 700px) {
+  .topbar {
+    height: 64px;
+    padding: 0 12px;
+  }
+  .orb-stage {
+    padding: 9px 0 13px;
+  }
+  .voice-orb {
+    width: 190px;
+    height: 190px;
+  }
+  .orb-status {
+    margin-top: 7px;
+    font-size: 7px;
+    letter-spacing: 2px;
+  }
+  .welcome {
+    margin-top: 0;
+  }
+  .eyebrow {
+    font-size: 6px;
+    letter-spacing: 1.3px;
+  }
+  h1 {
+    font-size: 29px;
+    margin-top: 13px;
+  }
+  .welcome > p {
+    font-size: 10px;
+  }
+  .suggestions {
+    margin-top: 19px;
+    gap: 7px;
+  }
+  .suggestions button {
+    padding: 12px 10px;
+    min-height: 102px;
+  }
+  .composer-area {
+    padding-bottom: max(12px, env(safe-area-inset-bottom));
+  }
+  .composer {
+    border-radius: 12px;
+  }
+  .in-conversation .voice-orb {
+    width: 108px;
+    height: 108px;
+  }
+  .in-conversation .orb-stage {
+    padding-top: 0;
+  }
+  .messages {
+    margin-bottom: 0;
+  }
+  .sidebar-shade:not([hidden]) {
+    background: #02080dbb;
+  }
+}
+@media (max-height: 700px) {
+  .voice-orb {
+    width: 165px;
+    height: 165px;
+  }
+  .orb-stage {
+    padding-top: 0;
+    padding-bottom: 10px;
+  }
+  .welcome > p {
+    line-height: 1.6;
+  }
+  .suggestions {
+    margin-top: 17px;
+  }
+  .in-conversation .voice-orb {
+    width: 90px;
+    height: 90px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .orbit-outer,
+  .orbit-inner,
+  .orb-halo {
+    animation: none !important;
+  }
+  .orb-core,
+  .orb-wave i {
+    transform: none !important;
+  }
+}

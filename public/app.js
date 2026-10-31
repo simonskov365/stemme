@@ -108,6 +108,22 @@ function controls() {
   $("speech-enabled").disabled = !state.speech;
   $("rename-chat").hidden = !state.conversation;
   $("delete-chat").hidden = !state.conversation;
+  document.body.classList.toggle("in-conversation", state.messages.length > 0);
+  const activity =
+    !player.paused && !player.ended
+      ? "speaking"
+      : !state.ready
+        ? "offline"
+        : state.posting || (a && !a.done)
+          ? "thinking"
+          : "idle";
+  document.documentElement.dataset.assistantState = activity;
+  $("orb-status").textContent = {
+    speaking: "Stemme taler",
+    thinking: "Et øjeblik …",
+    idle: "Klar til dig",
+    offline: "Afventer forbindelse",
+  }[activity];
 }
 function scrollBottom() {
   const w = $("workspace");
@@ -815,3 +831,75 @@ async function initialize() {
   }
 }
 void initialize();
+
+// Analyse only the assistant's playback. No microphone access is requested.
+let voiceContext, voiceAnalyser, voiceSamples, voiceFrame;
+const reducedMotion = matchMedia("(prefers-reduced-motion: reduce)");
+async function animateVoice() {
+  controls();
+  if (reducedMotion.matches) return;
+  try {
+    if (!voiceContext) {
+      const AudioContextClass =
+        window.AudioContext || window.webkitAudioContext;
+      if (!AudioContextClass) return;
+      const context = new AudioContextClass();
+      await context.resume();
+      if (context.state !== "running") {
+        await context.close();
+        return;
+      }
+      const source = context.createMediaElementSource(player);
+      const analyser = context.createAnalyser();
+      analyser.fftSize = 256;
+      source.connect(analyser);
+      analyser.connect(context.destination);
+      voiceContext = context;
+      voiceAnalyser = analyser;
+      voiceSamples = new Uint8Array(analyser.frequencyBinCount);
+    } else if (voiceContext.state === "suspended") await voiceContext.resume();
+    cancelAnimationFrame(voiceFrame);
+    const draw = () => {
+      if (
+        player.paused ||
+        player.ended ||
+        document.hidden ||
+        reducedMotion.matches
+      ) {
+        resetVoice();
+        return;
+      }
+      voiceAnalyser.getByteTimeDomainData(voiceSamples);
+      const energy = Math.sqrt(
+        voiceSamples.reduce((sum, n) => sum + ((n - 128) / 128) ** 2, 0) /
+          voiceSamples.length,
+      );
+      $("voice-orb").style.setProperty(
+        "--voice-level",
+        String(Math.min(1, energy * 5)),
+      );
+      voiceFrame = requestAnimationFrame(draw);
+    };
+    draw();
+  } catch {
+    /* Playback remains available when audio analysis is unsupported. */
+  }
+}
+function resetVoice() {
+  cancelAnimationFrame(voiceFrame);
+  $("voice-orb").style.setProperty("--voice-level", "0");
+  controls();
+}
+player.addEventListener("play", () => {
+  void animateVoice();
+});
+player.addEventListener("pause", resetVoice);
+player.addEventListener("ended", resetVoice);
+reducedMotion.addEventListener("change", () => {
+  if (reducedMotion.matches) resetVoice();
+  else if (!player.paused) void animateVoice();
+});
+document.addEventListener("visibilitychange", () => {
+  if (document.hidden) resetVoice();
+  else if (!player.paused) void animateVoice();
+});
