@@ -10,6 +10,7 @@ import {
 import { dirname, join, resolve, relative } from "node:path";
 import { fileURLToPath } from "node:url";
 import { spawnSync } from "node:child_process";
+import { assertPortFree, configuredPort } from "./server-port.mjs";
 const source = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 /** Copy application code only; never reads or copies credentials or conversation data. */
 export function copyUpdate(chosen) {
@@ -63,6 +64,7 @@ if (
   resolve(process.argv[1]) === fileURLToPath(import.meta.url)
 ) {
   try {
+    await assertPortFree(configuredPort(process.argv[2]));
     const target = copyUpdate(process.argv[2]);
     console.log(
       "Programfiler er opdateret. Dine nøgler, samtaler og assistentinstruktioner er bevaret.",

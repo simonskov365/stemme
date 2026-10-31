@@ -1,6 +1,4 @@
 import { readEvents } from "./stream.js";
-import { ConversationVoice } from "./voice.js";
-import { mountEnergyOrb } from "./orb.js";
 let voice;
 const $ = (id) => document.getElementById(id);
 const state = {
@@ -12,6 +10,8 @@ const state = {
   generation: 0,
   ready: false,
   speech: false,
+  voiceAvailable: false,
+  transcription: false,
   pending: null,
   posting: false,
   navigating: false,
@@ -50,8 +50,11 @@ function headers(json = false) {
 }
 async function api(path, method = "GET", payload) {
   let r;
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 15000);
   try {
     r = await fetch(path, {
+      signal: controller.signal,
       method,
       headers: headers(payload !== undefined),
       ...(payload === undefined ? {} : { body: JSON.stringify(payload) }),
@@ -61,6 +64,8 @@ async function api(path, method = "GET", payload) {
       new Error("Forbindelsen blev afbrudt. Prøv igen med samme besked."),
       { network: true },
     );
+  } finally {
+    clearTimeout(timeout);
   }
   if (!r.ok) {
     const data = await r.json().catch(() => ({}));
@@ -109,7 +114,11 @@ function controls() {
     (!!a && (!a.done || a.loading > 0 || a.queue.size > 0 || !!a.currentUrl));
   $("stop-generation").hidden = !busy;
   $("speech-enabled").disabled = !state.speech || !!voice?.enabled;
-  $("voice-start").disabled = !state.ready || !state.speech;
+  $("voice-start").disabled =
+    !state.ready ||
+    !state.speech ||
+    !state.voiceAvailable ||
+    !state.transcription;
   $("voice-start").hidden = !!voice?.enabled;
   if (voice?.enabled) voice.update();
   $("rename-chat").hidden = !state.conversation;
@@ -830,6 +839,7 @@ async function initialize() {
     const health = await api("/v1/health");
     state.ready = health.providers.text !== "not-configured";
     state.speech = health.providers.speech !== "disabled";
+    state.transcription = health.transcription === "configured-unverified";
     state.conversations = await pages("/v1/conversations");
     connection(
       state.ready ? "Klar til dig" : "Tekst ikke tilsluttet",
@@ -840,6 +850,10 @@ async function initialize() {
     controls();
     if (!state.ready)
       notify("Tilføj Groq-indstillingerne på serveren for at få tekstsvar.");
+    else if (!state.transcription)
+      notify(
+        "Tekstchat er klar. Mikrofonen kræver den nye server: stop Stemme med Control+C i det gamle Terminal-vindue, og start Start.command igen.",
+      );
   } catch (e) {
     state.ready = false;
     connection("Ikke forbundet", true);
@@ -939,102 +953,137 @@ document.addEventListener("visibilitychange", () => {
   } else if (!player.paused) void animateVoice();
 });
 
-mountEnergyOrb($("voice-orb"), $("energy-canvas"));
-voice = new ConversationVoice({
-  isBusy: () =>
-    state.posting ||
-    state.navigating ||
-    !!state.pending ||
-    (!!state.active &&
-      (!state.active.done ||
-        state.active.loading > 0 ||
-        state.active.queue.size > 0 ||
-        !!state.active.currentUrl)),
-  onState: (phase) => {
-    document.documentElement.dataset.voicePhase = phase;
-    $("voice-bar").hidden = phase === "off";
-    $("voice-start").hidden = phase !== "off";
-    $("voice-send-now").hidden = phase !== "listening";
-    $("voice-interrupt").hidden = ![
-      "waiting",
-      "transcribing",
-      "sending",
-    ].includes(phase);
-    $("voice-status").textContent = {
-      off: "Mikrofon slukket",
-      permission: "Tillad mikrofonen i browseren …",
-      listening: "Jeg lytter — hold en kort pause, når du er færdig.",
-      transcribing: "Omsætter din tale til tekst …",
-      sending: "Sender din besked …",
-      waiting: "Mikrofon på pause, mens Stemme svarer.",
-    }[phase];
-    $("speech-enabled").disabled = !state.speech || phase !== "off";
-    if (phase === "listening") {
-      document.documentElement.dataset.assistantState = "listening";
-      $("orb-status").textContent = "Jeg lytter";
-    } else if (phase === "off") {
-      document.documentElement.dataset.assistantState = state.ready
-        ? "idle"
-        : "offline";
+function setupVoice(ConversationVoice) {
+  voice = new ConversationVoice({
+    isBusy: () =>
+      state.posting ||
+      state.navigating ||
+      !!state.pending ||
+      (!!state.active &&
+        (!state.active.done ||
+          state.active.loading > 0 ||
+          state.active.queue.size > 0 ||
+          !!state.active.currentUrl)),
+    onState: (phase) => {
+      document.documentElement.dataset.voicePhase = phase;
+      $("voice-bar").hidden = phase === "off";
+      $("voice-start").hidden = phase !== "off";
+      $("voice-send-now").hidden = phase !== "listening";
+      $("voice-interrupt").hidden = ![
+        "waiting",
+        "transcribing",
+        "sending",
+      ].includes(phase);
+      $("voice-status").textContent = {
+        off: "Mikrofon slukket",
+        permission: "Tillad mikrofonen i browseren …",
+        listening: "Jeg lytter — hold en kort pause, når du er færdig.",
+        transcribing: "Omsætter din tale til tekst …",
+        sending: "Sender din besked …",
+        waiting: "Mikrofon på pause, mens Stemme svarer.",
+      }[phase];
+      $("speech-enabled").disabled = !state.speech || phase !== "off";
+      if (phase === "listening") {
+        document.documentElement.dataset.assistantState = "listening";
+        $("orb-status").textContent = "Jeg lytter";
+      } else if (phase === "off") {
+        document.documentElement.dataset.assistantState = state.ready
+          ? "idle"
+          : "offline";
+      }
+    },
+    onLevel: (level) =>
+      $("voice-orb").style.setProperty("--mic-level", String(level)),
+    onError: (message) => notify(message),
+    interrupt: () => stopActive(),
+    transcribe: async (blob, id, signal) => {
+      const language = $("voice-language").value;
+      const r = await fetch("/v1/transcriptions", {
+        method: "POST",
+        headers: {
+          ...headers(),
+          "Content-Type": blob.type,
+          "X-Request-Id": id,
+          ...(language === "auto" ? {} : { "X-Audio-Language": language }),
+        },
+        body: blob,
+        signal,
+      });
+      const data = await r.json();
+      if (!r.ok)
+        throw new Error(
+          {
+            NO_SPEECH:
+              "Jeg kunne ikke høre en tydelig besked. Start samtalen igen, og prøv at tale tættere på mikrofonen.",
+            RATE_LIMITED:
+              "Groqs talekvote er midlertidigt nået. Vent lidt, og prøv igen.",
+            PROVIDER_AUTH:
+              "Groq kunne ikke godkende nøglen til transskription.",
+          }[data.error?.code] ??
+            "Talen kunne ikke genkendes. Kontrollér forbindelsen og din Groq-kvote.",
+        );
+      return data.text;
+    },
+    onTranscript: async (text) => {
+      $("message-input").value = text;
+      resize();
+      $("speech-enabled").checked = true;
+      await send();
+      if (state.pending || $("message-input").value.trim())
+        throw new Error(
+          "Beskeden blev ikke sendt. Ret eller prøv den igen i chatfeltet.",
+        );
+    },
+  });
+  $("voice-start").onclick = async () => {
+    if (!voice || !state.transcription) {
+      notify(
+        "Genstart Stemme med Start.command for at bruge mikrofonen. Tekstchat virker fortsat.",
+      );
+      return;
     }
-  },
-  onLevel: (level) =>
-    $("voice-orb").style.setProperty("--mic-level", String(level)),
-  onError: (message) => notify(message),
-  interrupt: () => stopActive(),
-  transcribe: async (blob, id, signal) => {
-    const language = $("voice-language").value;
-    const r = await fetch("/v1/transcriptions", {
-      method: "POST",
-      headers: {
-        ...headers(),
-        "Content-Type": blob.type,
-        "X-Request-Id": id,
-        ...(language === "auto" ? {} : { "X-Audio-Language": language }),
-      },
-      body: blob,
-      signal,
-    });
-    const data = await r.json();
-    if (!r.ok)
-      throw new Error(
-        {
-          NO_SPEECH:
-            "Jeg kunne ikke høre en tydelig besked. Start samtalen igen, og prøv at tale tættere på mikrofonen.",
-          RATE_LIMITED:
-            "Groqs talekvote er midlertidigt nået. Vent lidt, og prøv igen.",
-          PROVIDER_AUTH: "Groq kunne ikke godkende nøglen til transskription.",
-        }[data.error?.code] ??
-          "Talen kunne ikke genkendes. Kontrollér forbindelsen og din Groq-kvote.",
-      );
-    return data.text;
-  },
-  onTranscript: async (text) => {
-    $("message-input").value = text;
-    resize();
+    stopActive();
     $("speech-enabled").checked = true;
-    await send();
-    if (state.pending || $("message-input").value.trim())
-      throw new Error(
-        "Beskeden blev ikke sendt. Ret eller prøv den igen i chatfeltet.",
-      );
-  },
-});
-$("voice-start").onclick = async () => {
-  stopActive();
-  $("speech-enabled").checked = true;
-  try {
-    await voice.start();
-  } catch (e) {
-    notify(errorText(e));
-  }
-  controls();
-};
-$("voice-stop").onclick = () => {
-  voice.stop();
-  stopActive();
-  controls();
-};
-$("voice-send-now").onclick = () => voice.sendNow();
-$("voice-interrupt").onclick = () => voice.interrupt();
-window.addEventListener("pagehide", () => voice.stop());
+    try {
+      await voice.start();
+    } catch (e) {
+      notify(errorText(e));
+    }
+    controls();
+  };
+  $("voice-stop").onclick = () => {
+    voice.stop();
+    stopActive();
+    controls();
+  };
+  $("voice-send-now").onclick = () => voice.sendNow();
+  $("voice-interrupt").onclick = () => voice.interrupt();
+  window.addEventListener("pagehide", () => voice.stop());
+}
+// Optional enhancements must never prevent text chat from initializing.
+void import("./voice.js?v=voice-hotfix-1")
+  .then(({ ConversationVoice }) => {
+    setupVoice(ConversationVoice);
+    state.voiceAvailable = true;
+    controls();
+  })
+  .catch(() => {
+    state.voiceAvailable = false;
+    controls();
+    $("voice-start").title =
+      "Mikrofonmodulet kunne ikke indlæses. Genstart Stemme efter opdatering.";
+    notify(
+      "Tekstchat kan bruges. Mikrofonmodulet mangler: stop Stemme med Control+C i det gamle Terminal-vindue, og start Start.command igen.",
+    );
+  });
+void import("./orb.js?v=voice-hotfix-1")
+  .then(({ mountEnergyOrb }) => {
+    try {
+      mountEnergyOrb($("voice-orb"), $("energy-canvas"));
+    } catch {
+      $("voice-orb").classList.remove("energy-ready");
+    }
+  })
+  .catch(() => {
+    $("voice-orb").classList.remove("energy-ready");
+  });

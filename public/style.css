@@ -2790,3 +2790,20 @@ dialog input:not([type="checkbox"]) {
     animation: none !important;
   }
 }
+
+/* Decorative layers never participate in hit testing, including their descendants. */
+.atmosphere,
+.atmosphere *,
+.orb-stage,
+.orb-stage * {
+  pointer-events: none !important;
+}
+.composer-area {
+  pointer-events: auto;
+}
+.composer,
+.composer-toolbar,
+.voice-bar {
+  position: relative;
+  pointer-events: auto;
+}

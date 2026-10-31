@@ -30,3 +30,9 @@ Oplæsningen starter med den første færdige sætning, mens resten af teksten f
 Den seneste opdatering indeholder både ny backend-transskription og et sort/orange Canvas-design inspireret af referencebilledet. Brug Opdater.command som beskrevet ovenfor; kun at udskifte public er ikke nok. Eksisterende .env og Fish voice-id bevares. Groq-transskription virker med den eksisterende Groq-nøgle og bruger som standard whisper-large-v3-turbo, så en ny nøgle er ikke nødvendig.
 
 Efter opdatering: Start samtale → tillad mikrofonadgang i Safari → tal → hold en kort pause. Stemme svarer på engelsk med Fish-stemmen og åbner mikrofonen igen bagefter. Afbryd og tal bruges til at tage ordet under et svar. Afslut samtale slukker mikrofonen. Hvis adgang afvises, se Safari > Indstillinger > Websteder > Mikrofon og macOS > Systemindstillinger > Anonymitet og sikkerhed > Mikrofon. Undlad at indsætte API-nøgler i browseren.
+
+## Hvis siden bliver stående på Forbinder
+
+Det kan ske, når en gammel Node-server stadig kører, mens nye frontendfiler ligger på disken. Den gamle backend kan mangle routes til voice.js/orb.js. Tidligere blokerede manglende ekstramoduler hele JavaScript-opstarten; dette er rettet, så tekstchatten fortsat kan starte, og mikrofonen giver en tydelig genstartsbesked.
+
+Find det gamle Terminal-vindue, som kører Stemme, tryk **Control+C** dér og åbn den eksisterende **Start.command** igen. Genindlæs browseren med **Command+Shift+R**. Hvis der står, at porten er optaget, kører der stadig en server; en ny Start.command erstatter ikke den gamle proces. Luk ikke kun den nye Terminal-fane med fejlbeskeden. Den nye opdateringsfil afviser nu at kopiere programfiler, mens serverporten er optaget, og startfilen afviser at åbne databasen under en anden aktiv server.

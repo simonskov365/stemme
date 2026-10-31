@@ -2,13 +2,14 @@
 export async function readEvents(response, onEvent, signal) {
   if (!response.ok || !response.body)
     throw new Error("Forbindelsen til svaret blev afbrudt.");
-  const reader = response.body.pipeThrough(new TextDecoderStream()).getReader();
+  const reader = response.body.getReader();
+  const decoder = new TextDecoder();
   let buffer = "";
   try {
     while (!signal.aborted) {
       const { value, done } = await reader.read();
       if (done) break;
-      buffer += value;
+      buffer += decoder.decode(value, { stream: true });
       let boundary;
       while ((boundary = buffer.indexOf("\n\n")) !== -1) {
         const frame = buffer.slice(0, boundary);

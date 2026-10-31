@@ -58,3 +58,23 @@ test("Mac updater refuses an unrelated directory", () => {
     rmSync(dir, { recursive: true, force: true });
   }
 });
+
+test("Mac startup guard refuses a running server before update or database recovery", async () => {
+  const { createServer } = await import("node:net");
+  // @ts-expect-error Standalone Mac ES module.
+  const { assertPortFree } = await import("../mac/server-port.mjs");
+  const server = createServer((socket) => socket.end());
+  await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", resolve));
+  const address = server.address();
+  assert.ok(address && typeof address !== "string");
+  const port = address.port;
+  try {
+    await assert.rejects(
+      assertPortFree(port),
+      (e: any) => e.code === "EADDRINUSE" && e.message.includes("Control+C"),
+    );
+  } finally {
+    await new Promise<void>((resolve) => server.close(() => resolve()));
+  }
+  await assertPortFree(port);
+});

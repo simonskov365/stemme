@@ -24,6 +24,7 @@ async function setup(
   failSpeech = false,
   microphone = false,
   denyMicrophone = false,
+  unavailableFeatures = false,
 ) {
   const f = await buildApp(
     config({
@@ -113,6 +114,14 @@ async function setup(
         };
       },
       { deny: denyMicrophone },
+    );
+  if (unavailableFeatures)
+    await page.route(/\/(voice|orb)\.js(?:\?.*)?$/, (route) =>
+      route.fulfill({
+        status: 404,
+        contentType: "text/plain",
+        body: "Feature module unavailable",
+      }),
     );
   await page.goto(`http://127.0.0.1:${addr.port}`);
   return {
@@ -582,6 +591,24 @@ test("interrupting pending transcription discards its late result and releases m
     );
   } finally {
     release();
+    await f.close();
+  }
+});
+
+test("text chat and settings stay usable when optional voice/animation modules are missing", async () => {
+  const f = await setup(undefined, false, false, false, true);
+  try {
+    await f.page.waitForFunction(() =>
+      document
+        .querySelector("#connection")
+        ?.textContent?.includes("Klar til dig"),
+    );
+    await send(f.page, "Hej");
+    await complete(f.page);
+    await f.page.locator("#open-settings").click();
+    assert.equal(await f.page.locator("#settings-dialog").isVisible(), true);
+    assert.equal(await f.page.locator("#voice-start").isDisabled(), true);
+  } finally {
     await f.close();
   }
 });

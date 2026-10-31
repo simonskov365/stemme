@@ -57,7 +57,7 @@ Code and data stay local; nothing has been pushed, deployed or published by setu
 
 ## Browser tests
 
-`npm run test:ui` runs nine browser scenarios against a separate in-memory database and mocked text/speech providers. It never uses real provider credentials. Requires Chromium (default `/usr/bin/chromium`, override with `CHROMIUM_PATH`) and `ffmpeg` on PATH for a synthetic MP3 fixture. Both are available in this cloud environment. Playwright Core is pinned in the lockfile; no browser download is needed here. Screenshots are written to ignored `artifacts/`. Regular `npm test` remains independent of browser/ffmpeg availability.
+`npm run test:ui` runs ten browser scenarios against a separate in-memory database and mocked text/speech providers. It never uses real provider credentials. Requires Chromium (default `/usr/bin/chromium`, override with `CHROMIUM_PATH`) and `ffmpeg` on PATH for a synthetic MP3 fixture. Both are available in this cloud environment. Playwright Core is pinned in the lockfile; no browser download is needed here. Screenshots are written to ignored `artifacts/`. Regular `npm test` remains independent of browser/ffmpeg availability.
 
 The static login shell is public when API_TOKEN is enabled, but every API request still requires authentication. Only seven exact static paths are served. No `.env`, database, source file, arbitrary path or provider configuration is accessible. A same-origin CSP restricts scripts and connections; user/assistant text is rendered as literal text, never inserted as HTML. Same-origin browser requests are accepted without adding the local server origin to ALLOWED_ORIGINS; external origins still require the configured allowlist.
 
@@ -81,3 +81,5 @@ Klik **Start samtale**, og tillad mikrofonen i browseren. Tal normalt, og hold e
 - Transskription bruger din eksisterende Groq-nøgle og Groqs særskilte talekvote. Ingen ny betalingsplan aktiveres af appen. Requests efter tvetydige fejl genforsøges ikke automatisk.
 
 Det nye sort/orange design er inspireret af referencebilledet. Energikuglen tegnes lokalt med Canvas, uden eksterne billeder eller scripts, reagerer på både mikrofon og Fish-afspilning og bliver bag chatten ved scroll. Reduceret bevægelse giver et stillestående billede.
+
+Mikrofon og energianimation indlæses nu som valgfrie moduler: en manglende eller ikke-understøttet ekstrafunktion kan ikke blokere tekstchatten. Dekorative lag opsnapper aldrig klik. Hvis siden viser Forbinder efter en opdatering, stop den gamle server med Control+C, start Start.command igen og genindlæs browseren. Mac-opdateringen kontrollerer nu serverporten, før programfiler overskrives; Mac-starten kontrollerer porten, før databasen åbnes.
