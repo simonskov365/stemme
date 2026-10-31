@@ -7,7 +7,13 @@ const schema = z.object({
   OWNER_ID: z.string().default("local-user"),
   GROQ_API_KEY: z.string().min(1).optional(),
   GROQ_MODEL: z.string().min(1).optional(),
-  GROQ_TRANSCRIPTION_MODEL: z.string().optional(),
+  GROQ_TRANSCRIPTION_MODEL: z.string().min(1).default("whisper-large-v3-turbo"),
+  TRANSCRIPTION_MAX_BYTES: z.coerce
+    .number()
+    .int()
+    .min(1024)
+    .max(25 * 1024 * 1024)
+    .default(8 * 1024 * 1024),
   SPEECH_ENABLED: bool.default(false),
   FISH_API_KEY: z.string().min(1).optional(),
   FISH_MODEL: z.string().min(1).optional(),

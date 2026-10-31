@@ -24,3 +24,9 @@ Den seneste udgave har en større lyscirkel, langsomt bevægeligt baggrundslys, 
 Cirklen er nu forankret til chatvinduet uden for det scrollende beskedområde. Lange samtaler glider hen over den; den forsvinder ikke op med teksten. Teksten har en diskret mørk baggrund for læsbarhed, og cirklen opsnapper ingen klik. Mens lyden afspilles, vibrerer cirklens indre lag i takt med den målte lydstyrke. Reduceret bevægelse slår vibrationen fra.
 
 Oplæsningen starter med den første færdige sætning, mens resten af teksten fortsætter. Tidligere ventede backenden på hele svaret. Fish Audios netværks- og behandlingstid gælder stadig, og der kan være pauser mellem segmenter. Korte segmenter betyder flere TTS-forespørgsler end ét samlet kald; udbyderens kvoter og vilkår gælder. Tale- og tekstfejl håndteres fortsat uafhængigt, og Stop afbryder begge køer.
+
+## Mikrofon og orange energikerne
+
+Den seneste opdatering indeholder både ny backend-transskription og et sort/orange Canvas-design inspireret af referencebilledet. Brug Opdater.command som beskrevet ovenfor; kun at udskifte public er ikke nok. Eksisterende .env og Fish voice-id bevares. Groq-transskription virker med den eksisterende Groq-nøgle og bruger som standard whisper-large-v3-turbo, så en ny nøgle er ikke nødvendig.
+
+Efter opdatering: Start samtale → tillad mikrofonadgang i Safari → tal → hold en kort pause. Stemme svarer på engelsk med Fish-stemmen og åbner mikrofonen igen bagefter. Afbryd og tal bruges til at tage ordet under et svar. Afslut samtale slukker mikrofonen. Hvis adgang afvises, se Safari > Indstillinger > Websteder > Mikrofon og macOS > Systemindstillinger > Anonymitet og sikkerhed > Mikrofon. Undlad at indsætte API-nøgler i browseren.

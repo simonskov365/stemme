@@ -3,7 +3,7 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width,initial-scale=1" />
-    <meta name="theme-color" content="#070d14" />
+    <meta name="theme-color" content="#090704" />
     <title>Stemme · Din personlige assistent</title>
     <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
     <link rel="stylesheet" href="/style.css" />
@@ -99,6 +99,7 @@
         <section class="orb-stage" aria-label="Assistentens aktivitet">
           <div class="voice-orb" id="voice-orb" aria-hidden="true">
             <div class="orb-shell">
+              <canvas id="energy-canvas" aria-hidden="true"></canvas>
               <div class="orb-halo"></div>
               <div class="orb-aura"></div>
               <div class="orb-ripple ripple-one"></div>
@@ -244,6 +245,18 @@
               ×
             </button>
           </div>
+          <div class="voice-bar" id="voice-bar" hidden>
+            <div class="voice-indicator">
+              <span></span
+              ><strong id="voice-status" role="status">Mikrofon slukket</strong>
+            </div>
+            <div class="voice-buttons">
+              <button type="button" id="voice-send-now">Send nu</button
+              ><button type="button" id="voice-interrupt" hidden>
+                Afbryd og tal</button
+              ><button type="button" id="voice-stop">Afslut samtale</button>
+            </div>
+          </div>
           <form id="composer" class="composer">
             <label class="sr-only" for="message-input">Din besked</label
             ><textarea
@@ -254,14 +267,40 @@
               required
             ></textarea>
             <div class="composer-toolbar">
-              <label class="speech-toggle"
-                ><input
-                  id="speech-enabled"
-                  type="checkbox"
-                  role="switch"
-                /><span class="toggle-track" aria-hidden="true"></span
-                ><span>Talte svar</span></label
-              >
+              <div class="voice-controls">
+                <button
+                  type="button"
+                  id="voice-start"
+                  class="voice-start"
+                  disabled
+                >
+                  <svg
+                    width="14"
+                    height="16"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="1.6"
+                    aria-hidden="true"
+                  >
+                    <rect x="9" y="2" width="6" height="12" rx="3" />
+                    <path d="M5 10v2a7 7 0 0 0 14 0v-2M12 19v3m-4 0h8" /></svg
+                  >Start samtale</button
+                ><label class="sr-only" for="voice-language">Talesprog</label
+                ><select id="voice-language" aria-label="Talesprog">
+                  <option value="auto">Auto sprog</option>
+                  <option value="da">Dansk</option>
+                  <option value="en">English</option>
+                </select>
+                <label class="speech-toggle"
+                  ><input
+                    id="speech-enabled"
+                    type="checkbox"
+                    role="switch"
+                  /><span class="toggle-track" aria-hidden="true"></span
+                  ><span>Talte svar</span></label
+                >
+              </div>
               <div class="composer-actions">
                 <span class="input-hint" id="input-hint"
                   >Enter for at sende</span
@@ -286,7 +325,8 @@
           </form>
           <p class="composer-note">
             <span aria-hidden="true">✧</span> En hjælpsom stemme. Dine
-            beslutninger. <span class="note-divider">·</span> AI kan tage fejl.
+            beslutninger. <span class="note-divider">·</span> Mikrofon sender
+            tale til Groq, når du starter samtale.
           </p>
         </div>
       </main>

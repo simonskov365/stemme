@@ -2315,3 +2315,478 @@ dialog input:not([type="checkbox"]) {
     transform: none !important;
   }
 }
+
+/* Amber energy: organic filaments and a molten core, without instrument panels. */
+:root {
+  --green: #efa44d;
+  --paper: #110d08;
+  --border: #3e2d19;
+  color: #efdfc9;
+  background: #090704;
+  color-scheme: dark;
+}
+.app-shell {
+  background:
+    radial-gradient(ellipse at 63% 40%, #47240e38, transparent 60%), #090704;
+}
+.sidebar {
+  background: #100d09;
+  border-color: #2b2115;
+}
+.brand {
+  color: #f5e6cf;
+}
+.brand-mark i {
+  background: #f9b454;
+  box-shadow: 0 0 10px #ff9e3333;
+}
+.brand-dot {
+  color: #e9a24b;
+}
+.new-chat {
+  background: #1c150c;
+  border-color: #49331b;
+  color: #e5c79e;
+}
+.new-chat:hover {
+  background: #2a1c0e;
+  border-color: #9c6430;
+}
+.sidebar-heading,
+.shortcut {
+  color: #95774f;
+}
+.sidebar-empty {
+  color: #8e785d;
+}
+.conversation-item {
+  color: #a88e70;
+}
+.conversation-item::before {
+  color: #a06b2e;
+}
+.conversation-item:hover,
+.conversation-item.active {
+  background: #2b1d0e;
+  color: #edc48c;
+}
+.conversation-item.active::before {
+  color: #f6b657;
+}
+.settings-button {
+  color: #a68b67;
+}
+.settings-button:hover {
+  color: #ffd799;
+}
+.profile {
+  border-color: #352919;
+  color: #c3aa87;
+}
+.profile small {
+  color: #917650;
+}
+.avatar {
+  background: #32230f;
+  color: #e7bd7b;
+}
+.profile-dot,
+.connection i {
+  background: #efb95e;
+  box-shadow: 0 0 9px #ef9b4960;
+}
+.topbar {
+  background: #0c0906aa;
+  border-color: #352413;
+}
+.room-name {
+  color: #bc9b72;
+}
+.private-label {
+  color: #a48458;
+  border-color: #4a351b;
+}
+.connection {
+  color: #dab783;
+}
+.icon-button {
+  color: #b49365;
+}
+.icon-button:hover {
+  background: #32220f;
+  color: #f7d294;
+}
+.aurora-one {
+  background: radial-gradient(ellipse, #9c4d1770, transparent 70%);
+}
+.aurora-two {
+  background: radial-gradient(ellipse, #78320e50, transparent 70%);
+}
+.ambient-star {
+  background: #f4bf6c;
+  box-shadow: 0 0 9px #ff9c35;
+}
+.main > .orb-stage,
+.in-conversation .main > .orb-stage {
+  opacity: 0.9;
+  inset: 75px 0 140px;
+}
+.main > .orb-stage .voice-orb,
+.in-conversation .main > .orb-stage .voice-orb {
+  width: clamp(340px, 44vw, 590px);
+}
+#energy-canvas {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+}
+.energy-ready .orb-rings,
+.energy-ready .orb-core,
+.energy-ready .orb-aura,
+.energy-ready .orb-ripple {
+  visibility: hidden;
+}
+.energy-ready .orb-halo {
+  background: radial-gradient(circle, #ff9a2425, transparent 70%);
+  filter: blur(22px);
+}
+.orb-status {
+  color: #c49152;
+}
+.eyebrow {
+  color: #a97a40;
+}
+.eyebrow > span {
+  background: #dca557;
+}
+h1 {
+  color: #efdbb9;
+}
+h1 em {
+  color: #f5ad54;
+}
+.welcome > p {
+  color: #b49067;
+}
+.welcome {
+  margin-top: clamp(290px, 41vh, 410px);
+}
+.suggestions button {
+  background: #171108c9;
+  border-color: #493019;
+}
+.suggestions button:hover {
+  background: #28190be8;
+  border-color: #ad6f2c;
+  box-shadow: 0 5px 26px #ff9e1818;
+}
+.suggestions strong {
+  color: #e0bc8a;
+}
+.suggestions button > span:not(.suggestion-icon) {
+  color: #ad895c;
+}
+.suggestion-icon,
+.suggestions b {
+  color: #d39a50;
+}
+.composer {
+  background: #160f08ed;
+  border-color: #63421e;
+  box-shadow: 0 0 35px #ff9a0e08;
+}
+.composer:focus-within {
+  border-color: #ba7d36;
+  box-shadow: 0 0 30px #e1941e12;
+}
+.composer textarea {
+  color: #f3dbb8;
+}
+.composer textarea::placeholder {
+  color: #a3835c;
+}
+.speech-toggle {
+  color: #bd9c6e;
+}
+.toggle-track {
+  background: #574020;
+}
+.speech-toggle input:checked + .toggle-track {
+  background: #af742b;
+}
+.speech-toggle input:checked + .toggle-track::after {
+  background: #ffe2ad;
+}
+.input-hint {
+  color: #91714b;
+}
+.send-button {
+  background: #996020;
+  border-color: #d09140;
+  color: #fff0d0;
+  box-shadow: 0 0 12px #ffba3520;
+}
+.send-button:not(:disabled):hover {
+  background: #b97828;
+  box-shadow: 0 0 20px #ffb02b40;
+}
+.stop-button {
+  background: #38230e;
+  border-color: #815221;
+  color: #edbf7a;
+}
+.composer-note {
+  color: #a58253;
+  font-size: 9px;
+}
+.composer-note > span:first-child {
+  color: #c1914d;
+}
+.message {
+  background: linear-gradient(90deg, #110b06e8, #110b06c4 65%, #110b0660);
+}
+.message-content {
+  color: #f0d9b9;
+}
+.message.user .message-content {
+  color: #c2a783;
+}
+.message-role {
+  color: #bc945d;
+}
+.message-role::before {
+  background: #31200e;
+  color: #ffbd66;
+  border-color: #765025;
+}
+.message.user .message-role::before {
+  background: #251b0f;
+  color: #c2a47b;
+}
+.message-meta {
+  color: #ac8555;
+}
+.message-action {
+  color: #e5af62;
+}
+.message-content.pending:empty::after {
+  color: #ffc776;
+}
+.audio-tray {
+  background: #2b1b0c;
+  border-color: #714c23;
+  color: #e8bb7d;
+}
+.audio-indicator {
+  color: #ffc678;
+}
+.notice {
+  background: #32200e;
+  border-color: #805623;
+  color: #f4cc8c;
+}
+dialog {
+  background: #160f09;
+  border-color: #65461f;
+  color: #eed4ad;
+}
+dialog p {
+  color: #be9b70;
+}
+.muted,
+.setting-row small {
+  color: #b18c5e;
+}
+.setting-row,
+.access-settings {
+  border-color: #553b1b;
+}
+.memory-item {
+  background: #291c0e;
+  border-color: #674721;
+}
+.memory-item p {
+  color: #debd8c;
+}
+.memory-item button {
+  color: #e6b76a;
+}
+dialog textarea,
+dialog input:not([type="checkbox"]) {
+  background: #110c07;
+  border-color: #6c4b23;
+  color: #f5dbae;
+}
+.primary-button {
+  background: #9b6525;
+  color: #fff0d5;
+}
+.secondary-button {
+  background: #36230f;
+  border-color: #775020;
+  color: #ebc48e;
+}
+.dialog-feedback {
+  color: #e0b46c;
+}
+.memory-heading > span {
+  color: #c89b5d;
+}
+.voice-controls {
+  display: flex;
+  align-items: center;
+  gap: 13px;
+  flex-wrap: wrap;
+}
+.voice-start {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  border: 1px solid #98662e;
+  border-radius: 8px;
+  padding: 8px 10px;
+  background: #38240e;
+  color: #f2cb8c;
+  font-size: 11px;
+  white-space: nowrap;
+}
+.voice-start:not(:disabled):hover {
+  background: #5b370f;
+  box-shadow: 0 0 15px #eaaa3026;
+}
+#voice-language {
+  max-width: 110px;
+  background: #21170b;
+  color: #cba76e;
+  border: 1px solid #5c3e1c;
+  border-radius: 6px;
+  padding: 5px;
+  font-size: 10px;
+}
+.voice-bar {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 12px;
+  align-items: center;
+  background: #2b1b0de8;
+  border: 1px solid #8c5a25;
+  border-radius: 11px;
+  padding: 12px 14px;
+  margin-bottom: 10px;
+}
+.voice-indicator {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  flex: 1;
+  min-width: 180px;
+}
+.voice-indicator > span {
+  width: 7px;
+  height: 7px;
+  background: #bd873d;
+  border-radius: 50%;
+}
+.voice-indicator strong {
+  font-size: 11px;
+  font-weight: 450;
+  color: #edc78c;
+  line-height: 1.5;
+}
+.voice-buttons {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.voice-buttons button {
+  border: 1px solid #7f5726;
+  background: #3b260e;
+  border-radius: 6px;
+  font-size: 10px;
+  padding: 7px 9px;
+  color: #ffdaa0;
+}
+.voice-buttons #voice-stop {
+  border-color: #94603a;
+  background: #432417;
+}
+[data-voice-phase="listening"] .voice-indicator > span {
+  background: #ffce71;
+  box-shadow: 0 0 12px #ffb13c;
+  animation: mic-ready 1.8s ease-in-out infinite;
+}
+[data-assistant-state="listening"] .orb-status {
+  color: #ffcf81;
+}
+[data-assistant-state="speaking"] .orb-status {
+  color: #ffce85;
+  text-shadow: 0 0 14px #f6a82e90;
+}
+[data-assistant-state="speaking"] .main > .orb-stage {
+  opacity: 1;
+}
+@keyframes mic-ready {
+  50% {
+    box-shadow: 0 0 18px #ffb13c99;
+  }
+}
+@media (max-width: 700px) {
+  .main > .orb-stage {
+    inset: 64px 0 160px;
+  }
+  .main > .orb-stage .voice-orb,
+  .in-conversation .main > .orb-stage .voice-orb {
+    width: min(430px, 108vw);
+  }
+  .welcome {
+    margin-top: 290px;
+  }
+  .voice-controls {
+    gap: 8px;
+  }
+  .voice-start {
+    font-size: 10px;
+    padding: 8px;
+  }
+  .voice-controls .speech-toggle {
+    font-size: 9px;
+  }
+  .composer-toolbar {
+    align-items: flex-end;
+  }
+  .voice-bar {
+    padding: 10px;
+  }
+  .voice-indicator {
+    min-width: 100%;
+  }
+  #voice-language {
+    max-width: 90px;
+    font-size: 9px;
+  }
+  .composer-note {
+    font-size: 8px;
+    text-align: center;
+    line-height: 1.6;
+  }
+  .composer-actions {
+    gap: 7px;
+  }
+}
+@media (max-height: 700px) {
+  .main > .orb-stage .voice-orb,
+  .in-conversation .main > .orb-stage .voice-orb {
+    width: 330px;
+  }
+  .welcome {
+    margin-top: 200px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .voice-indicator > span {
+    animation: none !important;
+  }
+}

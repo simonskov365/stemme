@@ -12,6 +12,11 @@ import { FishSpeech } from "./providers/fish.js";
 import type { TextProvider, SpeechProvider } from "./providers/types.js";
 import { Orchestrator } from "./orchestrator.js";
 import { Tools } from "./tools.js";
+import {
+  GroqTranscription,
+  Transcriptions,
+  type TranscriptionProvider,
+} from "./transcription.js";
 const uuid = z.uuid();
 const requestId = z
   .string()
@@ -52,7 +57,11 @@ function noSecrets(text: string) {
 }
 export async function buildApp(
   c: Config,
-  providers?: { text: TextProvider; speech: SpeechProvider },
+  providers?: {
+    text: TextProvider;
+    speech: SpeechProvider;
+    transcription?: TranscriptionProvider;
+  },
   database?: Store,
 ) {
   const app = Fastify({
@@ -85,6 +94,8 @@ export async function buildApp(
     ["/", ["index.html", "text/html; charset=utf-8"]],
     ["/app.js", ["app.js", "text/javascript; charset=utf-8"]],
     ["/stream.js", ["stream.js", "text/javascript; charset=utf-8"]],
+    ["/voice.js", ["voice.js", "text/javascript; charset=utf-8"]],
+    ["/orb.js", ["orb.js", "text/javascript; charset=utf-8"]],
     ["/style.css", ["style.css", "text/css; charset=utf-8"]],
     ["/favicon.svg", ["favicon.svg", "image/svg+xml"]],
   ]);
@@ -107,7 +118,13 @@ export async function buildApp(
   await app.register(cors, {
     origin: origins,
     methods: ["GET", "POST", "PATCH", "DELETE"],
-    allowedHeaders: ["Content-Type", "Authorization", "Last-Event-ID"],
+    allowedHeaders: [
+      "Content-Type",
+      "Authorization",
+      "Last-Event-ID",
+      "X-Request-Id",
+      "X-Audio-Language",
+    ],
   });
   await app.register(rateLimit, { max: 120, timeWindow: "1 minute" });
   app.addHook("onRequest", async (req, reply) => {
@@ -169,6 +186,62 @@ export async function buildApp(
     });
   });
   const owner = () => c.OWNER_ID;
+  const transcriptions = new Transcriptions(
+    c,
+    providers?.transcription ?? new GroqTranscription(c),
+  );
+  app.addContentTypeParser(
+    /^audio\/(?:webm|mp4|ogg|wav|mpeg)(?:;.*)?$/,
+    { parseAs: "buffer", bodyLimit: c.TRANSCRIPTION_MAX_BYTES },
+    (_req, payload, done) => done(null, payload),
+  );
+  app.post(
+    "/v1/transcriptions",
+    {
+      bodyLimit: c.TRANSCRIPTION_MAX_BYTES,
+      config: { rateLimit: { max: 10, timeWindow: "1 minute" } },
+    },
+    async (req, reply) => {
+      if (!c.GROQ_API_KEY)
+        throw new AppError(
+          "TRANSCRIPTION_NOT_CONFIGURED",
+          "Configure Groq for microphone transcription",
+          503,
+        );
+      const rid = body(uuid, req.headers["x-request-id"]);
+      const language = body(
+        z.enum(["da", "en"]).optional(),
+        req.headers["x-audio-language"],
+      );
+      if (!Buffer.isBuffer(req.body))
+        throw new AppError(
+          "INVALID_AUDIO",
+          "Upload audio directly with an audio Content-Type",
+          415,
+        );
+      const type = (req.headers["content-type"] ?? "")
+        .split(";")[0]
+        .trim()
+        .toLowerCase();
+      const controller = new AbortController();
+      const disconnected = () => {
+        if (!reply.raw.writableEnded) controller.abort();
+      };
+      reply.raw.on("close", disconnected);
+      try {
+        return await transcriptions.run(
+          owner(),
+          rid,
+          req.body,
+          type,
+          language,
+          controller.signal,
+        );
+      } finally {
+        reply.raw.off("close", disconnected);
+      }
+    },
+  );
   const params = (req: { params: unknown }, key: string) => {
     const p = req.params as Record<string, unknown>;
     return body(uuid, p[key]);
@@ -179,7 +252,7 @@ export async function buildApp(
       text: c.GROQ_API_KEY ? "configured-unverified" : "not-configured",
       speech: c.SPEECH_ENABLED ? "configured-unverified" : "disabled",
     },
-    transcription: "not-implemented",
+    transcription: c.GROQ_API_KEY ? "configured-unverified" : "not-configured",
   }));
   app.post("/v1/conversations", async (req, reply) => {
     const b = body(

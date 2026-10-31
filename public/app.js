@@ -1,4 +1,7 @@
 import { readEvents } from "./stream.js";
+import { ConversationVoice } from "./voice.js";
+import { mountEnergyOrb } from "./orb.js";
+let voice;
 const $ = (id) => document.getElementById(id);
 const state = {
   token: "",
@@ -105,24 +108,30 @@ function controls() {
     state.posting ||
     (!!a && (!a.done || a.loading > 0 || a.queue.size > 0 || !!a.currentUrl));
   $("stop-generation").hidden = !busy;
-  $("speech-enabled").disabled = !state.speech;
+  $("speech-enabled").disabled = !state.speech || !!voice?.enabled;
+  $("voice-start").disabled = !state.ready || !state.speech;
+  $("voice-start").hidden = !!voice?.enabled;
+  if (voice?.enabled) voice.update();
   $("rename-chat").hidden = !state.conversation;
   $("delete-chat").hidden = !state.conversation;
   document.body.classList.toggle("in-conversation", state.messages.length > 0);
   const activity =
     !player.paused && !player.ended
       ? "speaking"
-      : !state.ready
-        ? "offline"
-        : state.posting || (a && !a.done)
-          ? "thinking"
-          : "idle";
+      : voice?.enabled && voice.phase === "listening"
+        ? "listening"
+        : !state.ready
+          ? "offline"
+          : state.posting || (a && !a.done)
+            ? "thinking"
+            : "idle";
   document.documentElement.dataset.assistantState = activity;
   $("orb-status").textContent = {
     speaking: "Stemme taler",
     thinking: "Et øjeblik …",
     idle: "Klar til dig",
     offline: "Afventer forbindelse",
+    listening: "Jeg lytter",
   }[activity];
 }
 function scrollBottom() {
@@ -359,8 +368,10 @@ function applyEvent(a, event) {
     a.next = 0;
   }
   if (event.type === "audio.available") void loadAudio(a, d);
-  if (event.type === "speech.failed")
+  if (event.type === "speech.failed") {
+    voice?.stop();
     notify("Talte svar kunne ikke genereres. Du kan stadig læse svaret.");
+  }
   const terminal =
     [
       "turn.cancelled",
@@ -384,6 +395,7 @@ function applyEvent(a, event) {
           event.type === "turn.interrupted" ? "interrupted" : "cancelled";
     }
     if (event.type === "turn.failed") {
+      voice?.stop();
       if (d.textStatus !== "completed") cleanAudio(a);
       if (m && m.status === "running")
         m.status = d.textStatus === "completed" ? "completed" : "failed";
@@ -431,6 +443,7 @@ async function streamTurn(a) {
 }
 async function selectConversation(c) {
   if (state.posting) return;
+  voice?.stop();
   stopActive();
   const selection = ++state.selection;
   state.navigating = true;
@@ -613,6 +626,7 @@ $("stop-generation").onclick = () => {
 $("stop-audio").onclick = () => stopActive();
 $("new-chat").onclick = () => {
   if (state.posting) return;
+  voice?.stop();
   stopActive();
   state.selection++;
   state.navigating = false;
@@ -919,6 +933,108 @@ document.addEventListener("visibilitychange", () => {
   document
     .querySelector(".main")
     .classList.toggle("motion-paused", document.hidden);
-  if (document.hidden) resetVoice();
-  else if (!player.paused) void animateVoice();
+  if (document.hidden) {
+    resetVoice();
+    voice?.stop();
+  } else if (!player.paused) void animateVoice();
 });
+
+mountEnergyOrb($("voice-orb"), $("energy-canvas"));
+voice = new ConversationVoice({
+  isBusy: () =>
+    state.posting ||
+    state.navigating ||
+    !!state.pending ||
+    (!!state.active &&
+      (!state.active.done ||
+        state.active.loading > 0 ||
+        state.active.queue.size > 0 ||
+        !!state.active.currentUrl)),
+  onState: (phase) => {
+    document.documentElement.dataset.voicePhase = phase;
+    $("voice-bar").hidden = phase === "off";
+    $("voice-start").hidden = phase !== "off";
+    $("voice-send-now").hidden = phase !== "listening";
+    $("voice-interrupt").hidden = ![
+      "waiting",
+      "transcribing",
+      "sending",
+    ].includes(phase);
+    $("voice-status").textContent = {
+      off: "Mikrofon slukket",
+      permission: "Tillad mikrofonen i browseren …",
+      listening: "Jeg lytter — hold en kort pause, når du er færdig.",
+      transcribing: "Omsætter din tale til tekst …",
+      sending: "Sender din besked …",
+      waiting: "Mikrofon på pause, mens Stemme svarer.",
+    }[phase];
+    $("speech-enabled").disabled = !state.speech || phase !== "off";
+    if (phase === "listening") {
+      document.documentElement.dataset.assistantState = "listening";
+      $("orb-status").textContent = "Jeg lytter";
+    } else if (phase === "off") {
+      document.documentElement.dataset.assistantState = state.ready
+        ? "idle"
+        : "offline";
+    }
+  },
+  onLevel: (level) =>
+    $("voice-orb").style.setProperty("--mic-level", String(level)),
+  onError: (message) => notify(message),
+  interrupt: () => stopActive(),
+  transcribe: async (blob, id, signal) => {
+    const language = $("voice-language").value;
+    const r = await fetch("/v1/transcriptions", {
+      method: "POST",
+      headers: {
+        ...headers(),
+        "Content-Type": blob.type,
+        "X-Request-Id": id,
+        ...(language === "auto" ? {} : { "X-Audio-Language": language }),
+      },
+      body: blob,
+      signal,
+    });
+    const data = await r.json();
+    if (!r.ok)
+      throw new Error(
+        {
+          NO_SPEECH:
+            "Jeg kunne ikke høre en tydelig besked. Start samtalen igen, og prøv at tale tættere på mikrofonen.",
+          RATE_LIMITED:
+            "Groqs talekvote er midlertidigt nået. Vent lidt, og prøv igen.",
+          PROVIDER_AUTH: "Groq kunne ikke godkende nøglen til transskription.",
+        }[data.error?.code] ??
+          "Talen kunne ikke genkendes. Kontrollér forbindelsen og din Groq-kvote.",
+      );
+    return data.text;
+  },
+  onTranscript: async (text) => {
+    $("message-input").value = text;
+    resize();
+    $("speech-enabled").checked = true;
+    await send();
+    if (state.pending || $("message-input").value.trim())
+      throw new Error(
+        "Beskeden blev ikke sendt. Ret eller prøv den igen i chatfeltet.",
+      );
+  },
+});
+$("voice-start").onclick = async () => {
+  stopActive();
+  $("speech-enabled").checked = true;
+  try {
+    await voice.start();
+  } catch (e) {
+    notify(errorText(e));
+  }
+  controls();
+};
+$("voice-stop").onclick = () => {
+  voice.stop();
+  stopActive();
+  controls();
+};
+$("voice-send-now").onclick = () => voice.sendNow();
+$("voice-interrupt").onclick = () => voice.interrupt();
+window.addEventListener("pagehide", () => voice.stop());

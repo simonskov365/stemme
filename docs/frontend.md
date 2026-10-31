@@ -2,7 +2,7 @@
 
 A ready-to-use Danish interface is now included in `public/` and served at `/` by `npm start`. The guide below remains useful for connecting a different interface. No separate frontend server/build is required for the included interface.
 
-Your interface owns microphone access, playback, and UI. The server accepts text only; there is no transcription endpoint. Use JSON fetches for commands and SSE fetch streaming for events. Keep Groq/Fish keys on the server. In a remote deployment, an authenticated backend-for-frontend should hold server credentials rather than shipping a shared API token in public JavaScript.
+Your interface owns microphone access, playback, and UI. The server accepts text turns and separate audio uploads through `/v1/transcriptions`. The included frontend now has an explicit microphone conversation mode. Use JSON fetches for commands and SSE fetch streaming for events. Keep Groq/Fish keys on the server. In a remote deployment, an authenticated backend-for-frontend should hold server credentials rather than shipping a shared API token in public JavaScript.
 
 ## Minimal flow
 
@@ -93,3 +93,9 @@ To stop or interrupt an answer, **first** pause current playback, clear its sour
 Show memory changes for explicit user confirmation; then call memory writes with `approved:true` and a human-readable `source` such as `User requested this on 2026-10-31`. Memory use is off per conversation until toggled with `{memoryEnabled:true}`. Provide inspect, edit, delete and disable controls using the documented endpoints. Do not save credentials or let model text silently create memories.
 
 For future tools, list `/v1/tools`, render known schemas, then propose a tool action. Present its **stored exact name and arguments** for approval. Send the returned fingerprint to `/approve` only after the user confirms that action, then `/execute`. Read-only tools need no approval; state-changing tools are refused without it. On timeout/unknown outcome, reconcile the external system before proposing anything new. Model statements are not action results. Default clock example has no external side effects. The registry deliberately does not assume your selected Groq model supports tools or structured outputs.
+
+## Microphone mode
+
+Use `POST /v1/transcriptions` with raw recorded audio bytes, the actual audio Content-Type, a stable UUID `X-Request-Id`, and optional `X-Audio-Language: da|en`. Do not send audio to the text model or Fish TTS. The response is `{text,requestId}`; submit `text` as a normal conversation turn only if the current voice session is still active. Cancel uploads with AbortController, invalidate the local session before stopping, and never auto-retry ambiguous uploads with a new request ID.
+
+`public/voice.js` owns microphone access and local silence detection. It starts only from a user gesture, mutes tracks while awaiting/playing the assistant, and waits for text completion AND all queued/downloading audio to finish before rearming. An explicit interrupt stops playback and pending work; stale transcription results are discarded. No speech recognition browser service is used. MediaRecorder chooses a supported MP4 or WebM MIME type; actual codecs are retained in Content-Type. Audio is not encoded into SSE or retained as files.

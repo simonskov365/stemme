@@ -19,7 +19,12 @@ const speechBytes = execFileSync("ffmpeg", [
   "mp3",
   "pipe:1",
 ]);
-async function setup(token?: string, failSpeech = false) {
+async function setup(
+  token?: string,
+  failSpeech = false,
+  microphone = false,
+  denyMicrophone = false,
+) {
   const f = await buildApp(
     config({
       DATABASE_PATH: ":memory:",
@@ -47,6 +52,12 @@ async function setup(token?: string, failSpeech = false) {
           }
         },
       },
+      transcription: {
+        async transcribe() {
+          await delay(20);
+          return "Hej fra mikrofonen";
+        },
+      },
       speech: {
         async synthesize(_text, signal) {
           if (failSpeech) throw new Error("Mocked speech failure");
@@ -62,15 +73,47 @@ async function setup(token?: string, failSpeech = false) {
   const browser = await chromium.launch({
     executablePath: process.env.CHROMIUM_PATH ?? "/usr/bin/chromium",
     headless: true,
-    args: ["--no-sandbox", "--disable-dev-shm-usage"],
+    args: [
+      "--no-sandbox",
+      "--disable-dev-shm-usage",
+      ...(microphone
+        ? [
+            "--use-fake-device-for-media-stream",
+            "--use-fake-ui-for-media-stream",
+          ]
+        : []),
+    ],
   });
   const page = await browser.newPage({
     viewport: { width: 1440, height: 1000 },
+    ...(microphone ? { permissions: ["microphone"] } : {}),
   });
   page.setDefaultTimeout(8000);
   page.setDefaultNavigationTimeout(10000);
   const errors: string[] = [];
   page.on("pageerror", (e) => errors.push(e.message));
+  if (microphone)
+    await page.addInitScript(
+      ({ deny }) => {
+        const original = navigator.mediaDevices.getUserMedia.bind(
+          navigator.mediaDevices,
+        );
+        navigator.mediaDevices.getUserMedia = async (constraints) => {
+          if (deny) throw new DOMException("Denied by test", "NotAllowedError");
+          const stream = await original(constraints);
+          (window as any).__testMicStream = stream;
+          return stream;
+        };
+        const starts = new WeakMap<AnalyserNode, number>();
+        AnalyserNode.prototype.getFloatTimeDomainData = function (
+          samples: Float32Array,
+        ) {
+          if (!starts.has(this)) starts.set(this, performance.now());
+          samples.fill(performance.now() - starts.get(this)! < 700 ? 0.08 : 0);
+        };
+      },
+      { deny: denyMicrophone },
+    );
   await page.goto(`http://127.0.0.1:${addr.port}`);
   return {
     ...f,
@@ -392,7 +435,12 @@ test("background orb stays visible while a long conversation scrolls over it", a
   try {
     await send(f.page, "Hej");
     await complete(f.page);
-    await f.page.waitForFunction(() => Number(getComputedStyle(document.querySelector('#voice-orb')!).opacity) >= .99);
+    await f.page.waitForFunction(
+      () =>
+        Number(
+          getComputedStyle(document.querySelector("#voice-orb")!).opacity,
+        ) >= 0.99,
+    );
     const initial = await f.page.locator("#voice-orb").boundingBox();
     assert.ok(initial);
     await f.page.evaluate(() => {
@@ -421,6 +469,119 @@ test("background orb stays visible while a long conversation scrolls over it", a
       "none",
     );
   } finally {
+    await f.close();
+  }
+});
+
+test("conversation mode records after consent, transcribes, speaks, and resumes listening", async () => {
+  const f = await setup(undefined, false, true);
+  try {
+    assert.equal(
+      await f.page.evaluate(() => Boolean((window as any).__testMicStream)),
+      false,
+    );
+    await f.page.locator("#voice-start").click();
+    await f.page.waitForFunction(
+      () => document.documentElement.dataset.voicePhase === "listening",
+    );
+    await f.page.waitForFunction(
+      () =>
+        document.querySelector(".message.user .message-content")
+          ?.textContent === "Hej fra mikrofonen",
+      undefined,
+      { timeout: 12000 },
+    );
+    await f.page.waitForFunction(
+      () => document.documentElement.dataset.assistantState === "speaking",
+    );
+    assert.equal(
+      await f.page.evaluate(() =>
+        (window as any).__testMicStream
+          .getAudioTracks()
+          .every((t: MediaStreamTrack) => !t.enabled),
+      ),
+      true,
+    );
+    await f.page.waitForFunction(
+      () => document.documentElement.dataset.voicePhase === "listening",
+      undefined,
+      { timeout: 12000 },
+    );
+    assert.equal(
+      f.store.all("SELECT * FROM messages WHERE role='user'").length,
+      1,
+    );
+    await f.page.locator("#voice-stop").click();
+    assert.equal(await f.page.locator("#voice-bar").isVisible(), false);
+    assert.equal(
+      await f.page.evaluate(() =>
+        (window as any).__testMicStream
+          .getTracks()
+          .every((t: MediaStreamTrack) => t.readyState === "ended"),
+      ),
+      true,
+    );
+  } finally {
+    await f.close();
+  }
+});
+test("microphone denial leaves text chat usable and explains the permission", async () => {
+  const f = await setup(undefined, false, true, true);
+  try {
+    await f.page.locator("#voice-start").click();
+    await f.page.waitForFunction(() =>
+      document
+        .querySelector("#notice-text")
+        ?.textContent?.includes("Mikrofonadgang blev afvist"),
+    );
+    assert.equal(await f.page.locator("#voice-bar").isVisible(), false);
+    await send(f.page, "Hej");
+    await complete(f.page);
+  } finally {
+    await f.close();
+  }
+});
+test("interrupting pending transcription discards its late result and releases mic on exit", async () => {
+  const f = await setup(undefined, false, true);
+  let release!: () => void;
+  const gate = new Promise<void>((r) => (release = r));
+  try {
+    let requested = false;
+    await f.page.route("**/v1/transcriptions", async (route) => {
+      requested = true;
+      await gate;
+      try {
+        await route.fulfill({
+          json: {
+            text: "This late transcript must never be sent",
+            requestId: "mock",
+          },
+        });
+      } catch {}
+    });
+    await f.page.locator("#voice-start").click();
+    for (let i = 0; i < 150 && !requested; i++) await delay(20);
+    assert.equal(requested, true);
+    await f.page.locator("#voice-interrupt").click();
+    release();
+    await f.page.waitForFunction(
+      () => document.documentElement.dataset.voicePhase === "listening",
+    );
+    assert.equal(
+      f.store.all("SELECT * FROM messages WHERE role='user'").length,
+      0,
+    );
+    await f.page.locator("#voice-stop").click();
+    assert.equal(
+      await f.page.evaluate(() =>
+        (window as any).__testMicStream
+          .getTracks()
+          .every((t: MediaStreamTrack) => t.readyState === "ended"),
+      ),
+      true,
+    );
+  } finally {
+    release();
     await f.close();
   }
 });
