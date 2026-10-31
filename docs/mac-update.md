@@ -36,3 +36,9 @@ Efter opdatering: Start samtale → tillad mikrofonadgang i Safari → tal → h
 Det kan ske, når en gammel Node-server stadig kører, mens nye frontendfiler ligger på disken. Den gamle backend kan mangle routes til voice.js/orb.js. Tidligere blokerede manglende ekstramoduler hele JavaScript-opstarten; dette er rettet, så tekstchatten fortsat kan starte, og mikrofonen giver en tydelig genstartsbesked.
 
 Find det gamle Terminal-vindue, som kører Stemme, tryk **Control+C** dér og åbn den eksisterende **Start.command** igen. Genindlæs browseren med **Command+Shift+R**. Hvis der står, at porten er optaget, kører der stadig en server; en ny Start.command erstatter ikke den gamle proces. Luk ikke kun den nye Terminal-fane med fejlbeskeden. Den nye opdateringsfil afviser nu at kopiere programfiler, mens serverporten er optaget, og startfilen afviser at åbne databasen under en anden aktiv server.
+
+## Start samtale er grå
+
+Åbn `/v1/health` på den kørende lokale server. Hvis resultatet indeholder `"transcription":"not-implemented"`, er det definitivt en gammel backend uden mikrofon-endpointet. Mikrofontilladelser kan ikke løse dette. Stop den gamle server, hent nyeste ZIP, kør Opdater.command fra den nye download og vælg din eksisterende installation. Efter opdatering/genstart skal feltet være `"transcription":"configured-unverified"`. API-nøglerne skal ikke udskiftes.
+
+Start-knappen forklarer nu, om backend eller mikrofonmodul mangler, frem for blot at blive ved med at være grå. Safari-opstart anmoder om mikrofonadgang uden først at vente på et eventuelt pauset lydsystem; efter godkendelse forbindes analysatoren gennem en lydløs outputnode. Der sendes ikke mikrofonlyd til højttalerne. Den Safari-lignende pausefejl og manglende backend-support dækkes af regressionstests i Chromium; Safari selv skal fortsat verificeres på Mac.

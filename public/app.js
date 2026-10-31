@@ -11,6 +11,8 @@ const state = {
   ready: false,
   speech: false,
   voiceAvailable: false,
+  voiceLoading: true,
+  initializing: true,
   transcription: false,
   pending: null,
   posting: false,
@@ -114,11 +116,7 @@ function controls() {
     (!!a && (!a.done || a.loading > 0 || a.queue.size > 0 || !!a.currentUrl));
   $("stop-generation").hidden = !busy;
   $("speech-enabled").disabled = !state.speech || !!voice?.enabled;
-  $("voice-start").disabled =
-    !state.ready ||
-    !state.speech ||
-    !state.voiceAvailable ||
-    !state.transcription;
+  $("voice-start").disabled = state.initializing || state.voiceLoading;
   $("voice-start").hidden = !!voice?.enabled;
   if (voice?.enabled) voice.update();
   $("rename-chat").hidden = !state.conversation;
@@ -846,6 +844,7 @@ async function initialize() {
       !state.ready,
     );
     if (!state.speech) $("speech-enabled").checked = false;
+    state.initializing = false;
     renderConversations();
     controls();
     if (!state.ready)
@@ -856,6 +855,7 @@ async function initialize() {
       );
   } catch (e) {
     state.ready = false;
+    state.initializing = false;
     connection("Ikke forbundet", true);
     notify(errorText(e));
     controls();
@@ -1035,22 +1035,6 @@ function setupVoice(ConversationVoice) {
         );
     },
   });
-  $("voice-start").onclick = async () => {
-    if (!voice || !state.transcription) {
-      notify(
-        "Genstart Stemme med Start.command for at bruge mikrofonen. Tekstchat virker fortsat.",
-      );
-      return;
-    }
-    stopActive();
-    $("speech-enabled").checked = true;
-    try {
-      await voice.start();
-    } catch (e) {
-      notify(errorText(e));
-    }
-    controls();
-  };
   $("voice-stop").onclick = () => {
     voice.stop();
     stopActive();
@@ -1060,15 +1044,51 @@ function setupVoice(ConversationVoice) {
   $("voice-interrupt").onclick = () => voice.interrupt();
   window.addEventListener("pagehide", () => voice.stop());
 }
+$("voice-start").onclick = async () => {
+  if (!state.ready) {
+    notify(
+      "Serveren er ikke klar. Kontrollér forbindelsesbeskeden øverst, og genstart Stemme med Start.command.",
+    );
+    return;
+  }
+  if (!state.transcription) {
+    notify(
+      "Den kørende server mangler mikrofonfunktionen. Stop det gamle Stemme-Terminal-vindue med Control+C, opdatér med Opdater.command, og åbn Start.command igen.",
+    );
+    return;
+  }
+  if (!voice) {
+    notify(
+      "Mikrofonfilen kunne ikke indlæses. Kør den nyeste Opdater.command, genstart Stemme og genindlæs med Command+Shift+R. Tekstchat kan stadig bruges.",
+    );
+    return;
+  }
+  if (!state.speech) {
+    notify(
+      "Talte svar er slået fra på serveren. Samtaletilstand kræver den eksisterende Fish-opsætning og SPEECH_ENABLED=true.",
+    );
+    return;
+  }
+  stopActive();
+  $("speech-enabled").checked = true;
+  try {
+    await voice.start();
+  } catch (e) {
+    notify(errorText(e));
+  }
+  controls();
+};
 // Optional enhancements must never prevent text chat from initializing.
-void import("./voice.js?v=voice-hotfix-1")
+void import("./voice.js?v=voice-hotfix-2")
   .then(({ ConversationVoice }) => {
     setupVoice(ConversationVoice);
     state.voiceAvailable = true;
+    state.voiceLoading = false;
     controls();
   })
   .catch(() => {
     state.voiceAvailable = false;
+    state.voiceLoading = false;
     controls();
     $("voice-start").title =
       "Mikrofonmodulet kunne ikke indlæses. Genstart Stemme efter opdatering.";
@@ -1076,7 +1096,7 @@ void import("./voice.js?v=voice-hotfix-1")
       "Tekstchat kan bruges. Mikrofonmodulet mangler: stop Stemme med Control+C i det gamle Terminal-vindue, og start Start.command igen.",
     );
   });
-void import("./orb.js?v=voice-hotfix-1")
+void import("./orb.js?v=voice-hotfix-2")
   .then(({ mountEnergyOrb }) => {
     try {
       mountEnergyOrb($("voice-orb"), $("energy-canvas"));

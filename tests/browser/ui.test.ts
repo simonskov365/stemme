@@ -607,7 +607,63 @@ test("text chat and settings stay usable when optional voice/animation modules a
     await complete(f.page);
     await f.page.locator("#open-settings").click();
     assert.equal(await f.page.locator("#settings-dialog").isVisible(), true);
-    assert.equal(await f.page.locator("#voice-start").isDisabled(), true);
+    assert.equal(await f.page.locator("#voice-start").isDisabled(), false);
+    await f.page.locator("#close-settings").click();
+    await f.page.locator("#voice-start").click();
+    await f.page.waitForFunction(() =>
+      document
+        .querySelector("#notice-text")
+        ?.textContent?.includes("Mikrofonfilen kunne ikke indlæses"),
+    );
+  } finally {
+    await f.close();
+  }
+});
+
+test("Safari-style suspended audio does not prevent the microphone permission request", async () => {
+  const f = await setup(undefined, false, true, true);
+  try {
+    await f.page.evaluate(() => {
+      AudioContext.prototype.resume = function () {
+        return new Promise<void>(() => {});
+      };
+    });
+    await f.page.locator("#voice-start").click();
+    await f.page.waitForFunction(() =>
+      document
+        .querySelector("#notice-text")
+        ?.textContent?.includes("Mikrofonadgang blev afvist"),
+    );
+    assert.equal(await f.page.locator("#voice-bar").isVisible(), false);
+  } finally {
+    await f.close();
+  }
+});
+
+test("older backend explains missing microphone support instead of a dead button", async () => {
+  const f = await setup();
+  try {
+    await f.page.route("**/v1/health", (r) =>
+      r.fulfill({
+        json: {
+          status: "ok",
+          providers: {
+            text: "configured-unverified",
+            speech: "configured-unverified",
+          },
+          transcription: "not-implemented",
+        },
+      }),
+    );
+    await f.page.reload();
+    await f.page.locator("#voice-start").click();
+    await f.page.waitForFunction(() =>
+      document
+        .querySelector("#notice-text")
+        ?.textContent?.includes("server mangler mikrofonfunktionen"),
+    );
+    await send(f.page, "Hej");
+    await complete(f.page);
   } finally {
     await f.close();
   }

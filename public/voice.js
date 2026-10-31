@@ -59,7 +59,8 @@ export class ConversationVoice {
     try {
       context = new (window.AudioContext || window.webkitAudioContext)();
       this.context = context;
-      await context.resume();
+      // Request permission in the click gesture; Safari resume() may stay pending until capture is allowed.
+      void context.resume().catch(() => {});
       stream = await navigator.mediaDevices.getUserMedia({
         audio: {
           echoCancellation: true,
@@ -74,6 +75,24 @@ export class ConversationVoice {
         return;
       }
       this.stream = stream;
+      if (context.state !== "running") {
+        const resume = context.resume();
+        let timeout;
+        try {
+          await Promise.race([
+            resume,
+            new Promise((_, reject) => {
+              timeout = setTimeout(
+                () => reject(new Error("AUDIO_SUSPENDED")),
+                4000,
+              );
+            }),
+          ]);
+        } finally {
+          clearTimeout(timeout);
+        }
+        if (context.state !== "running") throw new Error("AUDIO_SUSPENDED");
+      }
       stream.getTracks().forEach((t) => {
         t.enabled = false;
         t.addEventListener("ended", () => {
@@ -86,15 +105,28 @@ export class ConversationVoice {
       this.analyser = context.createAnalyser();
       this.analyser.fftSize = 1024;
       context.createMediaStreamSource(stream).connect(this.analyser);
+      // Safari needs an active output graph; zero gain prevents microphone monitoring/feedback.
+      const silent = context.createGain();
+      silent.gain.value = 0;
+      this.analyser.connect(silent);
+      silent.connect(context.destination);
       this.samples = new Float32Array(1024);
       this.state("waiting");
       this.update();
     } catch (e) {
       if (this.enabled && epoch === this.epoch)
         this.fail(
-          e?.name === "NotAllowedError"
-            ? "Mikrofonadgang blev afvist. Tillad mikrofonen for denne side i browseren og macOS-indstillingerne."
-            : "Mikrofonen kunne ikke starte. Kontrollér adgang og din valgte mikrofon.",
+          e?.message === "AUDIO_SUSPENDED"
+            ? "Safari har sat lydsystemet på pause. Klik Start samtale igen. Tillad også automatisk afspilning for denne side i Safari."
+            : ({
+                NotAllowedError:
+                  "Mikrofonadgang blev afvist. Tillad mikrofonen for denne side i Safari/Chrome og i macOS > Anonymitet og sikkerhed > Mikrofon.",
+                NotFoundError:
+                  "Der blev ikke fundet en mikrofon. Vælg en mikrofon under macOS > Lyd > Indgang.",
+                NotReadableError:
+                  "Mikrofonen kunne ikke åbnes. Luk andre optageapps, og prøv igen.",
+              }[e?.name] ??
+                "Mikrofonen kunne ikke starte. Kontrollér adgang og din valgte mikrofon."),
         );
       else {
         stream?.getTracks().forEach((t) => t.stop());
