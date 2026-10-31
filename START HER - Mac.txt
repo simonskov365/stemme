@@ -1,0 +1,86 @@
+STEMME PÅ DIN MAC
+================
+
+1. Installer Node.js 24 LTS
+   Gå til https://nodejs.org/en/download i Safari eller Chrome.
+   Vælg version 24 LTS og macOS Installer (.pkg).
+   Pakken virker med både Apple Silicon (M1/M2/M3/M4/nyere) og Intel,
+   når du installerer Node-versionen til din Mac.
+   Der kræves mindst Node 24.10 inden for version 24.
+
+2. Pak stemme-mac.zip ud
+   Dobbeltklik på zip-filen i Finder.
+   Flyt mappen "Stemme" til Dokumenter eller en anden fast placering
+   på din Mac. Undgå delte mapper og cloud-drev, hvis du vil holde
+   nøgler og samtaler lokalt.
+
+3. Dobbeltklik på Installer.command
+   Et Terminal-vindue åbnes. Indsæt først din Groq API-nøgle og derefter
+   din Fish API-nøgle. Nøglerne vises ikke, når du skriver eller indsætter.
+   Det er meningen. Tryk Enter efter hver nøgle.
+   Nøglerne skal kun indsættes i dette lokale vindue — ikke i ChatGPT.
+
+   Brug nye nøgler, hvis de gamle tidligere er delt i chatten.
+   Du finder/opretter nøgler på https://console.groq.com/keys og på
+   https://fish.audio/app/api-keys/.
+   Modeller og dit voice-id er allerede valgt:
+   Groq: openai/gpt-oss-20b
+   Fish: s2.1-pro-free
+   Stemme: 4f553d53658c4908b5f244345486d80d
+
+   Installerprogrammet henter afhængigheder, bygger appen og åbner
+   automatisk din browser. Der oprettes ingen betalingsaftale.
+
+4. Brug chatten
+   Skriv din besked, og slå "Talte svar" til under skrivefeltet.
+   Svarene er som standard på engelsk med din valgte Fish-stemme.
+   Hvis browseren kræver det, tryk på Afspil i lydafspilleren.
+   Mikrofon/transskription er ikke implementeret: du skriver til den.
+
+5. Næste gang
+   Dobbeltklik på Start.command. Lad Terminal-vinduet stå åbent.
+   Luk programmet med Ctrl+C i dette vindue, når du er færdig.
+   Din lokale browseradresse er http://127.0.0.1:3000.
+
+Hvis macOS blokerer filen
+------------------------
+Prøv først at højreklikke på Installer.command og vælge Åbn.
+Hvis macOS stadig blokerer, brug Systemindstillinger > Anonymitet
+og sikkerhed og godkend kun den fil, du selv har hentet herfra.
+Slå ikke macOS-sikkerheden fra generelt.
+
+Hvis der står, at filen ikke har rettigheder til at køre:
+Åbn Terminal, skriv "chmod u+x " (uden anførselstegn, med mellemrum
+bagefter), træk Installer.command fra Finder ind i Terminal, og tryk
+Enter. Gentag for Start.command. Dobbeltklik derefter på filen igen.
+
+Hvis der står, at porten er optaget
+----------------------------------
+Kontrollér, om Stemme allerede kører i et andet Terminal-vindue.
+Stop den eksisterende udgave med Ctrl+C, før du starter en ny.
+
+Data, nøgler og pris
+-------------------
+Pakken indeholder hverken dine API-nøgler eller dine cloud-samtaler.
+Nøgler gemmes i den skjulte .env-fil på din Mac med private rettigheder.
+Samtaler gemmes lokalt i data/stemme.sqlite. Del ikke .env eller data/.
+Nøglerne fra cloudmiljøet overføres ikke automatisk til din Mac.
+For at udskifte en lokal nøgle kan du redigere .env i en teksteditor;
+start programmet igen bagefter. Installer.command overskriver aldrig
+filen, hvis den allerede findes.
+
+Appen lytter kun på din egen computer. Der er ingen hostingudgift,
+men den kræver internet: beskedkontekst sendes til Groq, og tekst til
+oplæsning sendes til Fish Audio. Tjenesternes egne kvoter/vilkår gælder.
+Din Mac og appen skal køre, mens du bruger den. Denne lokale udgave
+kan ikke bruges fra andre computere via dit ChatGPT-login.
+
+Teknisk
+-------
+Kildekode og package-lock.json er inkluderet. Afhængigheder installeres
+på din Mac, så Linux-filer fra cloudmiljøet ikke bliver genbrugt.
+Browser-tests er valgfrie og kræver en separat Chromium-installation
+plus ffmpeg. De er ikke nødvendige for at starte appen.
+Mac-startfilerne er syntakskontrolleret og opsætningslogikken er testet
+med midlertidige testnøgler. Selve Finder/Gatekeeper-forløbet kan først
+bekræftes på en Mac; cloudmiljøet kører Linux.

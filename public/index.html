@@ -1,0 +1,326 @@
+<!doctype html>
+<html lang="da">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <meta name="theme-color" content="#f8f7f3" />
+    <title>Stemme · Din personlige assistent</title>
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    <link rel="stylesheet" href="/style.css" />
+    <script type="module" src="/app.js"></script>
+  </head>
+  <body>
+    <div class="app-shell">
+      <aside class="sidebar" id="sidebar" aria-label="Samtaler">
+        <a class="brand" href="/" aria-label="Stemme, startside"
+          ><span class="brand-mark" aria-hidden="true"
+            ><i></i><i></i><i></i><i></i><i></i></span
+          >stemme<span class="brand-dot">.</span></a
+        >
+        <button class="new-chat" id="new-chat">
+          <span aria-hidden="true">＋</span> Ny samtale
+          <span class="shortcut" aria-hidden="true"
+            ><svg
+              width="14"
+              height="14"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="1.5"
+              aria-hidden="true"
+            >
+              <path d="M6 18 18 6M6 6h12v12" /></svg
+          ></span>
+        </button>
+        <div class="sidebar-heading">
+          DINE SAMTALER <span id="conversation-count">0</span>
+        </div>
+        <nav id="conversations" aria-label="Samtalehistorik">
+          <p class="sidebar-empty">Dine samtaler finder et hjem her.</p>
+        </nav>
+        <div class="sidebar-bottom">
+          <button class="settings-button" id="open-settings">
+            <span aria-hidden="true">⚙</span> Hukommelse & indstillinger
+          </button>
+          <div class="profile">
+            <span class="avatar">D</span>
+            <div>Dit personlige rum<small>Kun dig og din assistent</small></div>
+            <span class="profile-dot" aria-hidden="true"></span>
+          </div>
+        </div>
+      </aside>
+      <div class="sidebar-shade" id="sidebar-shade" hidden></div>
+      <main class="main">
+        <header class="topbar">
+          <div class="topbar-left">
+            <button
+              class="icon-button mobile-menu"
+              id="menu-toggle"
+              aria-label="Åbn samtaler"
+              aria-expanded="false"
+            >
+              ☰</button
+            ><span class="room-name" id="room-name"
+              >Din personlige assistent</span
+            ><span class="private-label">PRIVAT RUM</span>
+          </div>
+          <div class="topbar-right">
+            <span class="connection" id="connection" role="status"
+              ><i></i> Forbinder</span
+            ><button
+              class="icon-button conversation-action"
+              id="rename-chat"
+              aria-label="Omdøb samtale"
+              title="Omdøb samtale"
+              hidden
+            >
+              ✎</button
+            ><button
+              class="icon-button conversation-action"
+              id="delete-chat"
+              aria-label="Slet samtale"
+              title="Slet samtale"
+              hidden
+            >
+              ⌫
+            </button>
+          </div>
+        </header>
+        <div class="workspace" id="workspace">
+          <section class="welcome" id="welcome" aria-labelledby="welcome-title">
+            <div class="eyebrow">
+              <span></span> LIDT MERE OVERSKUD. ÉN SAMTALE AD GANGEN.
+            </div>
+            <div class="hero-symbol" aria-hidden="true">
+              <span></span><span></span><span></span><span></span><span></span
+              ><span></span><span></span>
+            </div>
+            <h1 id="welcome-title">Plads til dine <em>tanker.</em></h1>
+            <p>
+              En idé, et spørgsmål eller noget, du skal have styr på.<br />Jeg
+              er her — og vi tager det i dit tempo.
+            </p>
+            <div class="suggestions">
+              <button
+                data-prompt="Hjælp mig med at få overblik over min dag. Spørg mig først, hvad jeg skal nå."
+              >
+                <span class="suggestion-icon" aria-hidden="true">☀</span
+                ><strong>Skab overblik</strong
+                ><span>Få ro på dagens planer</span
+                ><b aria-hidden="true"
+                  ><svg
+                    width="14"
+                    height="14"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="1.5"
+                    aria-hidden="true"
+                  >
+                    <path d="M6 18 18 6M6 6h12v12" /></svg
+                ></b></button
+              ><button
+                data-prompt="Jeg vil gerne udvikle en idé. Hjælp mig i gang ved at spørge, hvad jeg har i tankerne."
+              >
+                <span class="suggestion-icon" aria-hidden="true">✧</span
+                ><strong>Tænk højt</strong
+                ><span>Giv en idé lidt mere plads</span
+                ><b aria-hidden="true"
+                  ><svg
+                    width="14"
+                    height="14"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="1.5"
+                    aria-hidden="true"
+                  >
+                    <path d="M6 18 18 6M6 6h12v12" /></svg
+                ></b></button
+              ><button
+                data-prompt="Hjælp mig med at skrive en tekst. Spørg mig, hvem den er til, og hvad jeg vil sige."
+              >
+                <span class="suggestion-icon" aria-hidden="true">✎</span
+                ><strong>Find ordene</strong><span>Kom fra tanke til tekst</span
+                ><b aria-hidden="true"
+                  ><svg
+                    width="14"
+                    height="14"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="1.5"
+                    aria-hidden="true"
+                  >
+                    <path d="M6 18 18 6M6 6h12v12" /></svg
+                ></b>
+              </button>
+            </div>
+          </section>
+          <section
+            class="messages"
+            id="messages"
+            aria-label="Beskeder"
+            aria-live="polite"
+            aria-relevant="additions"
+            hidden
+          ></section>
+        </div>
+        <div class="composer-area">
+          <div id="notice" class="notice" role="status" hidden>
+            <span id="notice-text"></span
+            ><button id="retry-send" hidden>Prøv igen</button
+            ><button
+              class="notice-close"
+              id="dismiss-notice"
+              aria-label="Luk besked"
+            >
+              ×
+            </button>
+          </div>
+          <div class="audio-tray" id="audio-tray" hidden>
+            <span class="audio-indicator" aria-hidden="true">♫</span
+            ><span id="audio-label">Dit svar er klar til afspilning</span
+            ><audio
+              id="player"
+              controls
+              aria-label="Afspil assistentens svar"
+            ></audio
+            ><button class="icon-button" id="stop-audio" aria-label="Stop lyd">
+              ×
+            </button>
+          </div>
+          <form id="composer" class="composer">
+            <label class="sr-only" for="message-input">Din besked</label
+            ><textarea
+              id="message-input"
+              placeholder="Hvad har du på hjerte?"
+              rows="1"
+              maxlength="12000"
+              required
+            ></textarea>
+            <div class="composer-toolbar">
+              <label class="speech-toggle"
+                ><input
+                  id="speech-enabled"
+                  type="checkbox"
+                  role="switch"
+                /><span class="toggle-track" aria-hidden="true"></span
+                ><span>Talte svar</span></label
+              >
+              <div class="composer-actions">
+                <span class="input-hint" id="input-hint"
+                  >Enter for at sende</span
+                ><button
+                  type="button"
+                  id="stop-generation"
+                  class="stop-button"
+                  hidden
+                >
+                  <span aria-hidden="true">■</span> Stop</button
+                ><button
+                  type="submit"
+                  id="send"
+                  class="send-button"
+                  aria-label="Send besked"
+                  disabled
+                >
+                  ↑
+                </button>
+              </div>
+            </div>
+          </form>
+          <p class="composer-note">
+            <span aria-hidden="true">✧</span> En hjælpsom stemme. Dine
+            beslutninger. <span class="note-divider">·</span> AI kan tage fejl.
+          </p>
+        </div>
+      </main>
+    </div>
+    <dialog id="settings-dialog" aria-labelledby="settings-title">
+      <div class="dialog-top">
+        <div>
+          <span class="eyebrow">DIT RUM, DINE VALG</span>
+          <h2 id="settings-title">Hukommelse & indstillinger</h2>
+        </div>
+        <button
+          class="icon-button"
+          id="close-settings"
+          aria-label="Luk indstillinger"
+        >
+          ×
+        </button>
+      </div>
+      <p>
+        Hukommelse er valgfri. Kun det, du selv gemmer, bliver husket på tværs
+        af samtaler.
+      </p>
+      <label class="setting-row"
+        ><span
+          ><strong>Brug hukommelse i denne samtale</strong
+          ><small>Du kan altid slå det fra igen.</small></span
+        ><input type="checkbox" id="memory-enabled" role="switch"
+      /></label>
+      <p class="muted" id="memory-hint">
+        Start en samtale for at bruge hukommelse.
+      </p>
+      <div class="memory-heading">
+        <h3>Det, du har bedt mig huske</h3>
+        <span id="memory-count"></span>
+      </div>
+      <div id="memories"></div>
+      <form id="memory-form">
+        <label for="memory-content">Tilføj noget, assistenten må huske</label
+        ><textarea
+          id="memory-content"
+          placeholder="Fx: Jeg foretrækker korte svar på dansk."
+          maxlength="2000"
+          required
+          rows="3"
+        ></textarea>
+        <p class="muted">Gem aldrig adgangskoder eller API-nøgler her.</p>
+        <button class="primary-button" type="submit">
+          Gem med min godkendelse
+        </button>
+      </form>
+      <p class="dialog-feedback" id="settings-feedback" role="status"></p>
+      <div class="access-settings">
+        <h3>Adgang til denne server</h3>
+        <p class="muted">
+          Kun hvis serveren kræver en adgangskode. Dette er ikke din Groq- eller
+          Fish-nøgle.
+        </p>
+        <form id="token-form">
+          <label class="sr-only" for="api-token">Serverens adgangskode</label
+          ><input
+            type="password"
+            id="api-token"
+            autocomplete="off"
+            placeholder="Serverens API_TOKEN"
+          /><button type="submit" class="secondary-button">Forbind</button>
+        </form>
+        <small class="muted">Gemmes kun i denne fanes hukommelse.</small>
+      </div>
+    </dialog>
+    <dialog id="confirm-dialog" aria-labelledby="confirm-title">
+      <form id="confirm-form">
+        <h2 id="confirm-title"></h2>
+        <p id="confirm-description"></p>
+        <label id="confirm-label" for="confirm-value" hidden>Nyt navn</label
+        ><textarea
+          id="confirm-value"
+          maxlength="200"
+          rows="3"
+          hidden
+        ></textarea>
+        <div class="dialog-actions">
+          <button type="button" id="confirm-cancel" class="secondary-button">
+            Annuller</button
+          ><button type="submit" class="primary-button" id="confirm-submit">
+            Gem
+          </button>
+        </div>
+      </form>
+    </dialog>
+  </body>
+</html>
