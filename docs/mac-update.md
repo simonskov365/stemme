@@ -1,14 +1,15 @@
 # Opdater til det mørke Stemme-interface på din Mac
 
-Denne opdatering ændrer kun brugerfladens filer i `public/`. Nøgler, samtaler, voice-id og engelske svar bevares i din eksisterende installation.
+Denne opdatering forbedrer både brugerfladen og backendens oplæsning. **Det er ikke nok kun at udskifte public-mappen denne gang.**
 
 1. Stop Stemme med **Control+C** i det Terminal-vindue, der kører appen.
 2. Åbn https://github.com/simonskov365/stemme og vælg **Code → Download ZIP**.
 3. Pak den nye zip ud. Finder kan give den nye mappe et nummer, hvis `stemme-main` allerede findes.
-4. Kopiér kun mappen **public** fra den nye download ind i din **eksisterende, fungerende Stemme-mappe** (den, hvor du normalt åbner `Start.command`). Vælg **Erstat** for `public`.
-5. Åbn din eksisterende **Start.command** igen. Åbn chatten og tryk **Command+Shift+R** i browseren for at indlæse de nye filer.
+4. I den **nye download**: dobbeltklik på **Opdater.command**.
+5. Vælg din **eksisterende, fungerende Stemme-mappe** i vinduet, der åbner. Det er mappen, hvor du normalt åbner `Start.command`, ikke den nye download.
+6. Opdateringen kopierer programfiler, installerer afhængigheder og bygger backenden. Derefter starter den din eksisterende installation igen. Genindlæs browseren med **Command+Shift+R**.
 
-Du skal ikke køre Installer.command igen. Erstat ikke hele den eksisterende projektmappe: `.env` og `data/` indeholder dine lokale nøgler og samtaler og skal blive liggende.
+Opdateringsværktøjet kopierer kun en fast liste af programfiler. Det overskriver aldrig `.env`, `data/` eller dine tilpassede `assistant.md`-instruktioner. Det kræver en eksisterende Stemme-installation og afviser den nye download som mål. Nye API-nøgler er ikke nødvendige. Finder-valget via AppleScript skal bekræftes på din Mac; kopieringslogikken er testet med midlertidige testdata i Linux.
 
 ## Design og lyd
 
@@ -17,3 +18,9 @@ Interfacet er mørkt med cyan lys, en central animeret cirkel og den eksisterend
 Hvis Safari blokerer automatisk afspilning, tryk på afspilningsknappen i chatten. Hvis lydanalyse ikke understøttes eller tillades af browseren, bevares almindelig afspilning. Browserens lokale lydadgang og visuelle reaktion er testet i Chromium; Safari-kontrollen på din Mac udestår.
 
 Den seneste udgave har en større lyscirkel, langsomt bevægeligt baggrundslys, kredsende lyspunkter og separate bølgebånd, der følger frekvenserne i den afspillede lyd. Stop nulstiller effekten med det samme. Bevægelse sættes på pause i skjulte faner, og reduceret bevægelse dæmper alle nye animationer.
+
+## Fast baggrund og hurtigere talestart
+
+Cirklen er nu forankret til chatvinduet uden for det scrollende beskedområde. Lange samtaler glider hen over den; den forsvinder ikke op med teksten. Teksten har en diskret mørk baggrund for læsbarhed, og cirklen opsnapper ingen klik. Mens lyden afspilles, vibrerer cirklens indre lag i takt med den målte lydstyrke. Reduceret bevægelse slår vibrationen fra.
+
+Oplæsningen starter med den første færdige sætning, mens resten af teksten fortsætter. Tidligere ventede backenden på hele svaret. Fish Audios netværks- og behandlingstid gælder stadig, og der kan være pauser mellem segmenter. Korte segmenter betyder flere TTS-forespørgsler end ét samlet kald; udbyderens kvoter og vilkår gælder. Tale- og tekstfejl håndteres fortsat uafhængigt, og Stop afbryder begge køer.

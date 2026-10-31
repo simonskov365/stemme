@@ -369,7 +369,8 @@ function applyEvent(a, event) {
       "audio.cancelled",
     ].includes(event.type) ||
     (!a.speechOnly && event.type === "turn.completed") ||
-    (a.speechOnly && event.type === "speech.completed");
+    (a.speechOnly &&
+      ["speech.completed", "speech.finished"].includes(event.type));
   if (terminal) {
     a.done = true;
     if (
@@ -383,6 +384,7 @@ function applyEvent(a, event) {
           event.type === "turn.interrupted" ? "interrupted" : "cancelled";
     }
     if (event.type === "turn.failed") {
+      if (d.textStatus !== "completed") cleanAudio(a);
       if (m && m.status === "running")
         m.status = d.textStatus === "completed" ? "completed" : "failed";
       notify(

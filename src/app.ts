@@ -288,7 +288,7 @@ export async function buildApp(
         t.id,
       )!.seq,
       speech_cursor: store.one(
-        "SELECT COALESCE(MAX(seq),0) AS seq FROM events WHERE turn_id=? AND type IN ('speech.started','text.completed')",
+        "SELECT COALESCE(MAX(seq),0) AS seq FROM events WHERE turn_id=? AND type='speech.started'",
         t.id,
       )!.seq,
     };

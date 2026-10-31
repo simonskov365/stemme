@@ -3,7 +3,8 @@ import { createHash } from "node:crypto";
 import type { Config } from "./config.js";
 import { AppError, safeError } from "./errors.js";
 import { Store, id, now, type Row } from "./store.js";
-import { context, speechText, sentences } from "./context.js";
+import { context } from "./context.js";
+import { SpeechSegments } from "./speech-segments.js";
 import type { TextProvider, SpeechProvider } from "./providers/types.js";
 export const fingerprint = (value: unknown) =>
   createHash("sha256").update(JSON.stringify(value)).digest("hex");
@@ -170,6 +171,10 @@ export class Orchestrator {
       this.c.REQUEST_TIMEOUT_MS,
     );
     timer.unref();
+    const speech = withSpeech
+      ? this.speechJob(t, active.controller.signal)
+      : undefined;
+    const segments = new SpeechSegments();
     try {
       const messages = context(
         this.store,
@@ -197,7 +202,12 @@ export class Orchestrator {
           t.response_id,
         );
         this.emit(t, "text.updated", { delta });
+        if (speech)
+          for (const sentence of segments.push(delta)) speech.enqueue(sentence);
       }
+      if (speech)
+        for (const sentence of segments.push("", true))
+          speech.enqueue(sentence);
       active.controller.signal.throwIfAborted();
       this.store.run(
         "UPDATE messages SET status='completed' WHERE id=?",
@@ -205,19 +215,24 @@ export class Orchestrator {
       );
       this.store.run("UPDATE turns SET status='completed' WHERE id=?", t.id);
       this.emit(t, "text.completed");
-      if (withSpeech) await this.speak(t, content, active.controller.signal);
+      if (speech) await speech.finish();
       active.controller.signal.throwIfAborted();
       this.emit(t, "turn.completed", {
         textStatus: "completed",
         speechStatus: this.store.turn(t.owner, t.id).speech_status,
       });
     } catch (e) {
+      if (speech) {
+        speech.abort();
+        await speech.settled();
+      }
       if (active.reason) return; // cancel() persists and emits immediately; late provider results are ignored.
       const err = active.controller.signal.aborted
         ? safeError(active.controller.signal.reason)
         : safeError(e);
       const current = this.store.turn(t.owner, t.id);
       if (current.status !== "completed") {
+        this.pruneAudio(t.id);
         this.store.run(
           "UPDATE turns SET status='failed',speech_status=CASE WHEN speech_status='running' THEN 'cancelled' ELSE speech_status END WHERE id=?",
           t.id,
@@ -239,58 +254,98 @@ export class Orchestrator {
       clearTimeout(timer);
     }
   }
-  private async speak(t: Row, text: string, signal: AbortSignal) {
+  private speechJob(t: Row, outer: AbortSignal) {
+    const controller = new AbortController();
+    const signal = AbortSignal.any([outer, controller.signal]);
     const speechId = id();
-    this.emit(t, "speech.batch", { speechId });
-    try {
-      const segments = sentences(speechText(text));
-      for (let sequence = 0; sequence < segments.length; sequence++) {
-        const bytes = await this.speech.synthesize(segments[sequence], signal);
-        signal.throwIfAborted();
-        this.pruneAudio();
-        const total = [...this.audio.values()].reduce(
-          (sum, a) => sum + a.bytes.length,
-          0,
-        );
-        if (total + bytes.length > 64 * 1024 * 1024)
-          throw new AppError(
-            "AUDIO_CAPACITY",
-            "Transient audio capacity reached",
-            503,
-          );
-        const aid = id(),
-          expires = Date.now() + this.c.AUDIO_TTL_SECONDS * 1000;
-        this.audio.set(aid, {
-          owner: t.owner,
-          turn: t.id,
-          bytes,
-          expires,
-          responseId: t.response_id,
-        });
-        this.emit(t, "audio.available", {
-          audioId: aid,
-          speechId,
-          sequence,
-          totalSegments: segments.length,
-          url: `/v1/audio/${aid}`,
-          contentType: "audio/mpeg",
-          expiresAt: new Date(expires).toISOString(),
-        });
+    let sequence = 0,
+      failed = false,
+      started = false;
+    let tail = Promise.resolve();
+    const enqueue = (text: string) => {
+      if (failed || signal.aborted) return;
+      if (!started) {
+        started = true;
+        this.emit(t, "speech.batch", { speechId });
       }
-      this.store.run(
-        "UPDATE turns SET speech_status='completed' WHERE id=?",
-        t.id,
-      );
-    } catch (e) {
-      if (signal.aborted) throw e;
-      this.store.run(
-        "UPDATE turns SET speech_status='failed' WHERE id=?",
-        t.id,
-      );
-      const err = safeError(e);
-      this.emit(t, "speech.failed", {
-        error: { code: err.code, message: err.message },
+      tail = tail.then(async () => {
+        if (failed || signal.aborted) return;
+        try {
+          const bytes = await this.speech.synthesize(text, signal);
+          signal.throwIfAborted();
+          this.pruneAudio();
+          const total = [...this.audio.values()].reduce(
+            (sum, a) => sum + a.bytes.length,
+            0,
+          );
+          if (total + bytes.length > 64 * 1024 * 1024)
+            throw new AppError(
+              "AUDIO_CAPACITY",
+              "Transient audio capacity reached",
+              503,
+            );
+          const aid = id(),
+            expires = Date.now() + this.c.AUDIO_TTL_SECONDS * 1000;
+          this.audio.set(aid, {
+            owner: t.owner,
+            turn: t.id,
+            bytes,
+            expires,
+            responseId: t.response_id,
+          });
+          this.emit(t, "audio.available", {
+            audioId: aid,
+            speechId,
+            sequence: sequence++,
+            totalSegments: null,
+            url: `/v1/audio/${aid}`,
+            contentType: "audio/mpeg",
+            expiresAt: new Date(expires).toISOString(),
+          });
+        } catch (e) {
+          if (signal.aborted) return;
+          failed = true;
+          this.store.run(
+            "UPDATE turns SET speech_status='failed' WHERE id=?",
+            t.id,
+          );
+          const err = safeError(e);
+          this.emit(t, "speech.failed", {
+            error: { code: err.code, message: err.message },
+          });
+        }
       });
+    };
+    return {
+      enqueue,
+      abort: () => controller.abort(),
+      settled: () => tail,
+      finish: async () => {
+        await tail;
+        signal.throwIfAborted();
+        if (!failed)
+          this.store.run(
+            "UPDATE turns SET speech_status='completed' WHERE id=?",
+            t.id,
+          );
+        this.emit(t, "speech.finished", {
+          speechId,
+          totalSegments: sequence,
+          speechStatus: failed ? "failed" : "completed",
+        });
+      },
+    };
+  }
+  private async speak(t: Row, text: string, signal: AbortSignal) {
+    const job = this.speechJob(t, signal);
+    try {
+      const segments = new SpeechSegments();
+      for (const sentence of segments.push(text, true)) job.enqueue(sentence);
+      await job.finish();
+    } catch (e) {
+      job.abort();
+      await job.settled();
+      throw e;
     }
   }
   speechOnly(owner: string, tid: string, requestId: string) {

@@ -118,7 +118,12 @@ test("desktop chat, live deltas, speech playback, speech-only replay, history an
         .locator("#voice-orb")
         .evaluate((el) => el.getBoundingClientRect().width)) >= 300,
     );
-    await f.page.waitForFunction(() => Number(getComputedStyle(document.querySelector('#voice-orb')!).opacity) >= .99);
+    await f.page.waitForFunction(
+      () =>
+        Number(
+          getComputedStyle(document.querySelector("#voice-orb")!).opacity,
+        ) >= 0.99,
+    );
     mkdirSync("artifacts", { recursive: true });
     await f.page.screenshot({
       path: "artifacts/chat-desktop.png",
@@ -138,6 +143,12 @@ test("desktop chat, live deltas, speech playback, speech-only replay, history an
     );
     await f.page.waitForFunction(
       () => document.documentElement.dataset.assistantState === "speaking",
+    );
+    assert.equal(
+      await f.page
+        .locator(".orb-shell")
+        .evaluate((el) => getComputedStyle(el).animationName),
+      "voice-vibration",
     );
     await f.page.waitForFunction(
       () =>
@@ -371,6 +382,44 @@ test("speech failure leaves completed text readable and shows a clear notice", a
       "Hej! Jeg hjælper dig gerne.",
     );
     assert.equal(await f.page.locator("#audio-tray").isVisible(), false);
+  } finally {
+    await f.close();
+  }
+});
+
+test("background orb stays visible while a long conversation scrolls over it", async () => {
+  const f = await setup();
+  try {
+    await send(f.page, "Hej");
+    await complete(f.page);
+    await f.page.waitForFunction(() => Number(getComputedStyle(document.querySelector('#voice-orb')!).opacity) >= .99);
+    const initial = await f.page.locator("#voice-orb").boundingBox();
+    assert.ok(initial);
+    await f.page.evaluate(() => {
+      const messages = document.querySelector("#messages")!;
+      for (let i = 0; i < 40; i++) {
+        const article = document.createElement("article");
+        article.className = "message";
+        article.textContent =
+          "A long conversation paragraph to verify scrolling. ".repeat(15);
+        messages.append(article);
+      }
+      const workspace = document.querySelector("#workspace")!;
+      workspace.scrollTop = workspace.scrollHeight;
+    });
+    await f.page.waitForFunction(
+      () => document.querySelector("#workspace")!.scrollTop > 500,
+    );
+    const after = await f.page.locator("#voice-orb").boundingBox();
+    assert.ok(after);
+    assert.ok(Math.abs(initial.y - after.y) < 1);
+    assert.ok(after.y > 0 && after.y + after.height < 1000);
+    assert.equal(
+      await f.page
+        .locator(".orb-stage")
+        .evaluate((el) => getComputedStyle(el).pointerEvents),
+      "none",
+    );
   } finally {
     await f.close();
   }
