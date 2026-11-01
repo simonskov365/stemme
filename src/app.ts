@@ -11,6 +11,7 @@ import { GroqText } from "./providers/groq.js";
 import { FishSpeech } from "./providers/fish.js";
 import type { TextProvider, SpeechProvider } from "./providers/types.js";
 import { Orchestrator } from "./orchestrator.js";
+import { Nyra } from "./nyra.js";
 import { Tools } from "./tools.js";
 import {
   GroqTranscription,
@@ -186,6 +187,75 @@ export async function buildApp(
     });
   });
   const owner = () => c.OWNER_ID;
+  const nyra = new Nyra(store);
+  app.get("/v1/nyra", async () => nyra.status(owner()));
+  app.get("/v1/nyra/document", async () => {
+    const d = store.one(
+      "SELECT title,content,core,synced_at FROM nyra_documents WHERE owner=?",
+      owner(),
+    );
+    if (!d)
+      throw new AppError(
+        "NOT_FOUND",
+        "No continuity document is connected",
+        404,
+      );
+    return d;
+  });
+  app.post(
+    "/v1/nyra/connect",
+    { config: { rateLimit: { max: 5, timeWindow: "1 minute" } } },
+    async (req) => {
+      const b = body(
+        z
+          .object({ url: z.string().max(1500), approved: z.literal(true) })
+          .strict(),
+        req.body,
+      );
+      return nyra.connect(owner(), b.url);
+    },
+  );
+  app.post("/v1/nyra/import", { bodyLimit: 1100000 }, async (req) => {
+    const b = body(
+      z
+        .object({
+          text: z.string().min(1).max(1000000),
+          title: z.string().min(1).max(200),
+          approved: z.literal(true),
+        })
+        .strict(),
+      req.body,
+    );
+    return nyra.import(owner(), b.text, b.title);
+  });
+  app.post(
+    "/v1/nyra/sync",
+    { config: { rateLimit: { max: 5, timeWindow: "1 minute" } } },
+    async () => nyra.sync(owner()),
+  );
+  app.patch("/v1/nyra/profile", async (req) => {
+    const b = body(
+      z
+        .object({
+          name: z
+            .string()
+            .trim()
+            .min(1)
+            .max(60)
+            .regex(/^[\p{L}\p{N} ._-]+$/u),
+          persona: z.string().max(2200),
+          enabled: z.boolean(),
+          approved: z.literal(true),
+        })
+        .strict(),
+      req.body,
+    );
+    return nyra.profile(owner(), b.name, b.persona, b.enabled);
+  });
+  app.delete("/v1/nyra", async (_req, reply) => {
+    nyra.remove(owner());
+    return reply.code(204).send();
+  });
   const transcriptions = new Transcriptions(
     c,
     providers?.transcription ?? new GroqTranscription(c),
@@ -253,6 +323,11 @@ export async function buildApp(
       speech: c.SPEECH_ENABLED ? "configured-unverified" : "disabled",
     },
     transcription: c.GROQ_API_KEY ? "configured-unverified" : "not-configured",
+    assistantName:
+      store.one(
+        "SELECT name FROM nyra_profiles WHERE owner=? AND enabled=1",
+        owner(),
+      )?.name ?? c.ASSISTANT_NAME,
   }));
   app.post("/v1/conversations", async (req, reply) => {
     const b = body(
@@ -342,6 +417,19 @@ export async function buildApp(
           .strict(),
         req.body,
       );
+      store.conversation(owner(), cid);
+      const repeated = store.one(
+        "SELECT id FROM turns WHERE owner=? AND conversation_id=? AND request_key=?",
+        owner(),
+        cid,
+        b.requestId,
+      );
+      if (
+        !repeated &&
+        /^sync (up|mood)[.!?\s]*$/i.test(b.message) &&
+        nyra.status(owner()).profile.enabled
+      )
+        await nyra.sync(owner());
       const t = engine.start(owner(), cid, b);
       reply.code(202);
       return {

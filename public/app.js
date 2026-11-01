@@ -3,6 +3,7 @@ let voice;
 const $ = (id) => document.getElementById(id);
 const state = {
   token: "",
+  assistantName: "Stemme",
   conversations: [],
   conversation: null,
   messages: [],
@@ -134,7 +135,7 @@ function controls() {
             : "idle";
   document.documentElement.dataset.assistantState = activity;
   $("orb-status").textContent = {
-    speaking: "Stemme taler",
+    speaking: state.assistantName + " taler",
     thinking: "Et øjeblik …",
     idle: "Klar til dig",
     offline: "Afventer forbindelse",
@@ -223,7 +224,7 @@ function renderMessages() {
     el.dataset.messageId = m.id;
     const role = document.createElement("div");
     role.className = "message-role";
-    role.textContent = m.role === "user" ? "Dig" : "Stemme";
+    role.textContent = m.role === "user" ? "Dig" : state.assistantName;
     const content = document.createElement("div");
     content.className = "message-content";
     const meta = document.createElement("div");
@@ -300,7 +301,7 @@ async function playNext(a) {
   a.next++;
   player.src = url;
   $("audio-tray").hidden = false;
-  $("audio-label").textContent = "Stemme læser op";
+  $("audio-label").textContent = state.assistantName + " læser op";
   controls();
   try {
     await player.play();
@@ -783,6 +784,9 @@ $("open-settings").onclick = () => {
   $("memory-hint").hidden = !!state.conversation;
   $("settings-feedback").textContent = "";
   $("settings-dialog").showModal();
+  void loadNyra().catch((e) => {
+    $("nyra-feedback").textContent = errorText(e);
+  });
   void loadMemories().catch((e) => {
     $("settings-feedback").textContent = errorText(e);
   });
@@ -835,6 +839,7 @@ $("token-form").onsubmit = async (e) => {
 async function initialize() {
   try {
     const health = await api("/v1/health");
+    state.assistantName = health.assistantName ?? "Stemme";
     state.ready = health.providers.text !== "not-configured";
     state.speech = health.providers.speech !== "disabled";
     state.transcription = health.transcription === "configured-unverified";
@@ -1079,7 +1084,7 @@ $("voice-start").onclick = async () => {
   controls();
 };
 // Optional enhancements must never prevent text chat from initializing.
-void import("./voice.js?v=voice-hotfix-2")
+void import("./voice.js?v=nyra-1")
   .then(({ ConversationVoice }) => {
     setupVoice(ConversationVoice);
     state.voiceAvailable = true;
@@ -1096,7 +1101,7 @@ void import("./voice.js?v=voice-hotfix-2")
       "Tekstchat kan bruges. Mikrofonmodulet mangler: stop Stemme med Control+C i det gamle Terminal-vindue, og start Start.command igen.",
     );
   });
-void import("./orb.js?v=voice-hotfix-2")
+void import("./orb.js?v=nyra-1")
   .then(({ mountEnergyOrb }) => {
     try {
       mountEnergyOrb($("voice-orb"), $("energy-canvas"));
@@ -1107,3 +1112,138 @@ void import("./orb.js?v=voice-hotfix-2")
   .catch(() => {
     $("voice-orb").classList.remove("energy-ready");
   });
+
+function showNyra(data) {
+  const doc = data.document,
+    profile = data.profile;
+  $("nyra-source-status").textContent = doc
+    ? `${doc.title} · ${doc.characters.toLocaleString("da-DK")} tegn · Hentet ${new Date(doc.synced_at).toLocaleString("da-DK")}${doc.last_error ? " · Seneste opdatering mislykkedes; den tidligere kopi bruges." : ""}`
+    : "Intet dokument forbundet.";
+  $("nyra-name").value = profile.name;
+  $("nyra-persona").value = profile.persona;
+  $("nyra-enabled").checked = profile.enabled;
+  $("nyra-url").value = doc?.url ?? "";
+  $("nyra-save").disabled = !doc;
+  $("nyra-save").textContent = profile.enabled
+    ? "Godkend og brug profilen"
+    : "Gem profil uden at aktivere";
+  $("nyra-sync").disabled = !doc?.url;
+  $("nyra-delete").disabled = !doc;
+}
+async function loadNyra() {
+  showNyra(await api("/v1/nyra"));
+}
+function nyraError(e) {
+  return (
+    {
+      DOCUMENT_ACCESS:
+        "Google tillod ikke læsning via linket. Du behøver ikke gøre et privat dokument offentligt: hent det som .txt i Google Docs og importer kopien her.",
+      INVALID_DOCUMENT: "Indsæt et almindeligt Google Docs-link.",
+      DOCUMENT_UNAVAILABLE:
+        "Google kunne ikke nås. Din eksisterende kopi er bevaret.",
+      SENSITIVE_DOCUMENT:
+        "Dokumentet indeholder noget, der ligner en nøgle. Fjern nøgler fra dokumentet før import.",
+    }[e.code] ?? errorText(e)
+  );
+}
+$("nyra-connect").onsubmit = async (e) => {
+  e.preventDefault();
+  const button = e.submitter;
+  button.disabled = true;
+  $("nyra-feedback").textContent = "Henter en læsekopi fra Google …";
+  try {
+    showNyra(
+      await api("/v1/nyra/connect", "POST", {
+        url: $("nyra-url").value.trim(),
+        approved: true,
+      }),
+    );
+    $("nyra-feedback").textContent =
+      "Dokument hentet. Gennemse personligheden, slå profilen til, og tryk Godkend.";
+  } catch (e) {
+    $("nyra-feedback").textContent = nyraError(e);
+  } finally {
+    button.disabled = false;
+  }
+};
+$("nyra-file").onchange = async () => {
+  const file = $("nyra-file").files?.[0];
+  if (!file) return;
+  if (file.size > 1024 * 1024) {
+    $("nyra-feedback").textContent = "Tekstfilen må højst være 1 MiB.";
+    return;
+  }
+  try {
+    showNyra(
+      await api("/v1/nyra/import", "POST", {
+        title: file.name,
+        text: await file.text(),
+        approved: true,
+      }),
+    );
+    $("nyra-feedback").textContent =
+      "Lokal kopi importeret. Gennemse og godkend personligheden.";
+  } catch (e) {
+    $("nyra-feedback").textContent = nyraError(e);
+  }
+  $("nyra-file").value = "";
+};
+$("nyra-profile").onsubmit = async (e) => {
+  e.preventDefault();
+  const button = e.submitter;
+  button.disabled = true;
+  try {
+    const data = await api("/v1/nyra/profile", "PATCH", {
+      name: $("nyra-name").value.trim(),
+      persona: $("nyra-persona").value,
+      enabled: $("nyra-enabled").checked,
+      approved: true,
+    });
+    showNyra(data);
+    const health = await api("/v1/health");
+    state.assistantName = health.assistantName ?? "Stemme";
+    renderMessages();
+    $("nyra-feedback").textContent = data.profile.enabled
+      ? "Nyra-profilen bruges fra din næste besked."
+      : "Nyra-profilen er slået fra. Kilden er bevaret lokalt.";
+  } catch (e) {
+    $("nyra-feedback").textContent = nyraError(e);
+  } finally {
+    button.disabled = false;
+  }
+};
+$("nyra-sync").onclick = async () => {
+  $("nyra-sync").disabled = true;
+  try {
+    showNyra(await api("/v1/nyra/sync", "POST"));
+    $("nyra-feedback").textContent =
+      "Den lokale kopi er opdateret fra Google. Godkendt personlighed er bevaret.";
+  } catch (e) {
+    $("nyra-feedback").textContent = nyraError(e);
+    $("nyra-sync").disabled = false;
+  }
+};
+$("nyra-delete").onclick = async () => {
+  const yes = await ask({
+    title: "Fjern Nyra-kilden fra Stemme?",
+    description:
+      "Den lokale dokumentkopi og profil fjernes. Originalen i Google Docs og dine samtaler ændres ikke.",
+    confirm: "Fjern lokal kopi",
+  });
+  if (!yes) return;
+  try {
+    await api("/v1/nyra", "DELETE");
+    await loadNyra();
+    state.assistantName = (await api("/v1/health")).assistantName ?? "Stemme";
+    renderMessages();
+    $("nyra-feedback").textContent = "Lokal kilde og profil fjernet.";
+  } catch (e) {
+    $("nyra-feedback").textContent = nyraError(e);
+  }
+};
+
+$("nyra-enabled").onchange = () => {
+  $("nyra-save").textContent = $("nyra-enabled").checked
+    ? "Godkend og brug profilen"
+    : "Gem profil uden at aktivere";
+};

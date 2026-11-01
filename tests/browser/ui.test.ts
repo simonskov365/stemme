@@ -668,3 +668,50 @@ test("older backend explains missing microphone support instead of a dead button
     await f.close();
   }
 });
+
+test("Nyra text import requires approval, changes assistant name, and can be disabled/deleted", async () => {
+  const f = await setup();
+  try {
+    await f.page.locator("#open-settings").click();
+    await f.page.locator("#nyra-file").setInputFiles({
+      name: "Nyra-test.txt",
+      mimeType: "text/plain",
+      buffer: Buffer.from(
+        "Nyra – Test\n1. Permanent Core\nNyra identity & personality\nWarm and witty.\n\nConversation style\nBe curious.\n\n2. Continuity Timeline\nA telescope project was discussed.",
+      ),
+    });
+    await f.page.waitForFunction(() =>
+      document
+        .querySelector("#nyra-source-status")
+        ?.textContent?.includes("Nyra-test.txt"),
+    );
+    assert.equal(f.store.one("SELECT enabled FROM nyra_profiles")?.enabled, 0);
+    await f.page.locator("#nyra-enabled").check();
+    await f.page.locator("#nyra-save").click();
+    await f.page.waitForFunction(() =>
+      document
+        .querySelector("#nyra-feedback")
+        ?.textContent?.includes("næste besked"),
+    );
+    assert.equal(f.store.one("SELECT enabled FROM nyra_profiles")?.enabled, 1);
+    await f.page.locator("#close-settings").click();
+    await send(f.page, "Hej Nyra");
+    await complete(f.page);
+    assert.equal(
+      await f.page.locator(".message.assistant .message-role").textContent(),
+      "Nyra",
+    );
+    await f.page.locator("#open-settings").click();
+    await f.page.locator("#nyra-delete").click();
+    await f.page.locator("#confirm-submit").click();
+    await f.page.waitForFunction(
+      () =>
+        document.querySelector("#nyra-source-status")?.textContent ===
+        "Intet dokument forbundet.",
+    );
+    assert.equal(f.store.all("SELECT * FROM nyra_documents").length, 0);
+    assert.equal(f.store.all("SELECT * FROM messages").length, 2);
+  } finally {
+    await f.close();
+  }
+});

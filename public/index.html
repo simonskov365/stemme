@@ -6,8 +6,8 @@
     <meta name="theme-color" content="#090704" />
     <title>Stemme · Din personlige assistent</title>
     <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
-    <link rel="stylesheet" href="/style.css?v=voice-hotfix-2" />
-    <script type="module" src="/app.js?v=voice-hotfix-2"></script>
+    <link rel="stylesheet" href="/style.css?v=nyra-1" />
+    <script type="module" src="/app.js?v=nyra-1"></script>
   </head>
   <body>
     <div class="app-shell">
@@ -349,6 +349,76 @@
         Hukommelse er valgfri. Kun det, du selv gemmer, bliver husket på tværs
         af samtaler.
       </p>
+      <section class="nyra-settings" aria-labelledby="nyra-title">
+        <h3 id="nyra-title">Nyra · personlighed og kontinuitet</h3>
+        <p>
+          Forbind ét Google-dokument med delt læseadgang, eller importer en
+          .txt-kopi. Originalen ændres aldrig. Profilen bruges først, når du
+          godkender den.
+        </p>
+        <form id="nyra-connect">
+          <label for="nyra-url">Google Docs-link</label>
+          <div class="nyra-row">
+            <input
+              id="nyra-url"
+              type="url"
+              placeholder="https://docs.google.com/document/d/…"
+              required
+            /><button class="secondary-button" type="submit">
+              Hent dokument
+            </button>
+          </div>
+        </form>
+        <label class="nyra-file"
+          >Eller vælg en lokal teksteksport
+          <input id="nyra-file" type="file" accept=".txt,text/plain"
+        /></label>
+        <p id="nyra-source-status" role="status" class="muted">
+          Intet dokument forbundet.
+        </p>
+        <form id="nyra-profile">
+          <label for="nyra-name">Assistentens navn</label
+          ><input id="nyra-name" value="Nyra" maxlength="60" required /><label
+            for="nyra-persona"
+            >Personlighed — gennemse og ret uddraget før godkendelse</label
+          ><textarea
+            id="nyra-persona"
+            maxlength="2200"
+            rows="7"
+            placeholder="Personlighed og samtalestil fra dit dokument …"
+          ></textarea
+          ><label class="nyra-optin"
+            ><input id="nyra-enabled" type="checkbox" /> Brug Nyra-profilen og
+            dokumentet i mine samtaler</label
+          >
+          <p class="muted">
+            Relevante uddrag sendes til Groq, når du chatter. Ingen
+            indholdstekst eller nøgler lægges i GitHub. Ændringer i Google Docs
+            hentes ved opdatering, ikke automatisk i baggrunden.
+          </p>
+          <button type="submit" id="nyra-save" class="primary-button" disabled>
+            Godkend og brug profilen
+          </button>
+        </form>
+        <div class="nyra-row">
+          <button
+            type="button"
+            id="nyra-sync"
+            class="secondary-button"
+            disabled
+          >
+            Hent seneste fra Google Docs</button
+          ><button
+            type="button"
+            id="nyra-delete"
+            class="secondary-button"
+            disabled
+          >
+            Fjern fra Stemme
+          </button>
+        </div>
+        <p id="nyra-feedback" class="dialog-feedback" role="status"></p>
+      </section>
       <label class="setting-row"
         ><span
           ><strong>Brug hukommelse i denne samtale</strong

@@ -2807,3 +2807,59 @@ dialog input:not([type="checkbox"]) {
   position: relative;
   pointer-events: auto;
 }
+.nyra-settings {
+  border: 1px solid #67451f;
+  border-radius: 12px;
+  padding: 16px;
+  margin: 20px 0;
+  background: #24190c66;
+}
+.nyra-settings > h3 {
+  font-size: 15px;
+  color: #f2c988;
+  margin: 0 0 8px;
+}
+.nyra-settings form > label {
+  display: block;
+  font-size: 11px;
+  color: #c5a87e;
+  margin: 12px 0 7px;
+}
+.nyra-settings .nyra-optin {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  line-height: 1.7;
+}
+.nyra-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-top: 10px;
+}
+.nyra-row input {
+  flex: 1;
+  min-width: 130px;
+}
+.nyra-row button {
+  font-size: 10px;
+}
+.nyra-file {
+  display: block;
+  font-size: 10px;
+  color: #b99563;
+  margin: 14px 0;
+}
+.nyra-file input {
+  max-width: 100%;
+  font-size: 10px;
+  margin-top: 8px;
+}
+#nyra-persona {
+  font-size: 11px;
+  line-height: 1.7;
+}
+#nyra-source-status {
+  overflow-wrap: anywhere;
+}

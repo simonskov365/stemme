@@ -42,3 +42,7 @@ Find det gamle Terminal-vindue, som kører Stemme, tryk **Control+C** dér og å
 Åbn `/v1/health` på den kørende lokale server. Hvis resultatet indeholder `"transcription":"not-implemented"`, er det definitivt en gammel backend uden mikrofon-endpointet. Mikrofontilladelser kan ikke løse dette. Stop den gamle server, hent nyeste ZIP, kør Opdater.command fra den nye download og vælg din eksisterende installation. Efter opdatering/genstart skal feltet være `"transcription":"configured-unverified"`. API-nøglerne skal ikke udskiftes.
 
 Start-knappen forklarer nu, om backend eller mikrofonmodul mangler, frem for blot at blive ved med at være grå. Safari-opstart anmoder om mikrofonadgang uden først at vente på et eventuelt pauset lydsystem; efter godkendelse forbindes analysatoren gennem en lydløs outputnode. Der sendes ikke mikrofonlyd til højttalerne. Den Safari-lignende pausefejl og manglende backend-support dækkes af regressionstests i Chromium; Safari selv skal fortsat verificeres på Mac.
+
+## Nyra-kontinuitet
+
+Opdatér hele appen med Opdater.command for at få den nye database-migration og Google Docs-routes. Din private Google-fil følger ikke med ZIP-pakken. Indsæt selv linket i Hukommelse & indstillinger → Nyra efter opdateringen, hent dokumentet og godkend profilen. Se [Nyra-vejledningen](nyra.md). Ingen eksisterende nøgler eller data skal slettes.
